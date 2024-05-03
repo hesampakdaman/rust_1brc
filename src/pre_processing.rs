@@ -1,41 +1,62 @@
 use std::io::{self, BufRead, BufReader, Seek};
 
-fn partition(path: &str, partitions: usize) -> Result<Vec<BytePart>, io::Error> {
-    let file = std::fs::File::open(path)?;
-    let bytes = file.metadata()?.len();
-    let reader = io::BufReader::new(file);
-    split(reader, partitions, bytes)
+pub struct Partition {
+    chunks: Vec<Chunk>,
 }
 
-type Partition = Vec<BytePart>;
+impl TryFrom<std::fs::File> for Partition {
+    type Error = io::Error;
+
+    fn try_from(file: std::fs::File) -> Result<Self, Self::Error> {
+        let bytes = file.metadata()?.len();
+        let reader = io::BufReader::new(file);
+        let n_threads = std::thread::available_parallelism()?.get().max(1) as u64;
+        let splitter = Splitter::new(reader, bytes / n_threads, bytes as i64);
+        splitter.partition()
+    }
+}
 
 #[derive(Debug, PartialEq)]
-struct BytePart {
+struct Chunk {
     offset: u64,
-    length: u64,
+    size: u64,
 }
 
-fn split<T: io::Read + io::Seek>(
-    mut reader: BufReader<T>,
-    partitions: usize,
-    bytes: u64,
-) -> Result<Partition, io::Error> {
-    let mut partition = Vec::new();
-    let mut offset: u64 = 0;
-    let chunk_size = bytes / partitions as u64;
-    let mut buf = Vec::with_capacity(chunk_size as usize);
-    let mut rem_bytes = bytes as i64;
-    while rem_bytes > 0 {
-        let next_bytes = chunk_size.min(rem_bytes as u64);
-        reader.seek(io::SeekFrom::Start(offset + next_bytes))?;
-        let extra = reader.read_until(b'\n', &mut buf)? as u64;
-        let length = next_bytes + extra;
-        partition.push(BytePart { offset, length });
-        offset += length;
-        rem_bytes -= length as i64;
-        buf.clear();
+struct Splitter<T: io::Read + io::Seek> {
+    reader: BufReader<T>,
+    chunk_size: u64,
+    remaining_bytes: i64,
+}
+
+impl<T: io::Read + io::Seek> Splitter<T> {
+    fn new(reader: BufReader<T>, chunk_size: u64, remaining_bytes: i64) -> Self {
+        Self {
+            reader,
+            chunk_size,
+            remaining_bytes,
+        }
     }
-    Ok(partition)
+
+    fn partition(mut self) -> Result<Partition, io::Error> {
+        let mut segments = Vec::new();
+        let mut offset: u64 = 0;
+        let mut buf: Vec<u8> = Vec::with_capacity(self.chunk_size as usize);
+        while self.remaining_bytes > 0 {
+            let size = self.next_chunk_size(offset, &mut buf)?;
+            segments.push(Chunk { offset, size });
+            offset += size;
+            self.remaining_bytes -= size as i64;
+        }
+        Ok(Partition { chunks: segments })
+    }
+
+    fn next_chunk_size(&mut self, offset: u64, buf: &mut Vec<u8>) -> Result<u64, io::Error> {
+        let next_chunk = self.chunk_size.min(self.remaining_bytes as u64);
+        self.reader.seek(io::SeekFrom::Start(offset + next_chunk))?;
+        let extra = self.reader.read_until(b'\n', buf)? as u64;
+        buf.clear();
+        Ok(next_chunk + extra)
+    }
 }
 
 #[cfg(test)]
@@ -43,19 +64,19 @@ mod tests {
     use super::*;
     use std::io::{Cursor, Read, Seek};
 
-    fn check(parts: Vec<BytePart>, expected: &str) {
+    fn check(partition: Partition, expected: &str) {
         let contents = io::Cursor::new(expected.as_bytes());
         let mut actual = Vec::new();
-        for p in &parts {
+        for chunk in &partition.chunks {
             let mut reader = io::BufReader::new(contents.clone());
-            let mut buffer = vec![0; p.length as usize];
-            reader.seek(io::SeekFrom::Start(p.offset)).unwrap();
+            let mut buffer = vec![0; chunk.size as usize];
+            reader.seek(io::SeekFrom::Start(chunk.offset)).unwrap();
             reader.read(&mut buffer).unwrap();
             actual.extend_from_slice(&buffer);
         }
         assert_eq!(String::from_utf8(actual).unwrap(), expected.to_string());
         assert_eq!(
-            parts.iter().map(|p| p.length).sum::<u64>() as usize,
+            partition.chunks.iter().map(|p| p.size).sum::<u64>() as usize,
             expected.as_bytes().len()
         );
     }
@@ -71,7 +92,10 @@ mod tests {
  Ut vel leo faucibus, sodales augue volutpat, lobortis urna.
  Nam vitae gravida tortor.";
         let reader = BufReader::new(Cursor::new(data));
-        let parts = split(reader, 4, data.len() as u64).unwrap();
-        check(parts, data);
+        let bytes = data.as_bytes();
+        let partition = Splitter::new(reader, 4, bytes.len() as i64)
+            .partition()
+            .unwrap();
+        check(partition, data);
     }
 }
