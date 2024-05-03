@@ -1,8 +1,23 @@
+mod compute;
+mod pre_processing;
+mod record;
+mod aggregate;
+
+use std::fs::File;
+use std::sync::mpsc;
+use std::thread;
+
 fn main() {
-    // let path = ...
-    // let (tx, rx) = mpsc::channel();
-    // let partition = pre_processing::into_partition(path);
-    // let pool = ThreadPool::new(partition.len());
-    // partition.into_iter().map(|p| pool.execute(move || compute::statistics(p, tx.clone())))
-    // agg = aggregate::reduce(rx);
+    let args = std::env::args().collect::<Vec<String>>();
+    let file = File::open(args[1].clone()).expect("...");
+    let (tx, rx) = mpsc::channel();
+    pre_processing::Partition::try_from(file)
+        .unwrap()
+        .chunks
+        .into_iter()
+        .for_each(|chunk| {
+            let tx_clone = tx.clone();
+            thread::spawn(move || compute::stats(chunk, tx_clone));
+        });
+    aggregate::reduce(rx);
 }
