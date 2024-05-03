@@ -1,7 +1,7 @@
 use std::io::{self, BufRead, BufReader, Seek};
 
 pub struct Partition {
-    chunks: Vec<Chunk>,
+    pub chunks: Vec<Chunk>,
 }
 
 impl TryFrom<std::fs::File> for Partition {
@@ -17,7 +17,7 @@ impl TryFrom<std::fs::File> for Partition {
 }
 
 #[derive(Debug, PartialEq)]
-struct Chunk {
+pub struct Chunk {
     offset: u64,
     size: u64,
 }
