@@ -13,11 +13,11 @@ pub fn stats(chunk: Chunk, tx: Sender<HashMap<String, Record>>) {
     reader.read_exact(&mut buf).unwrap();
     let mut statistics = Statistics(HashMap::new());
     for line in buf.split(|&b| b == b'\n') {
-        if line.len() > 0 {
+        if !line.is_empty() {
             let splitted: Vec<_> = line.split(|&b| b == b';').collect();
-            let city = unsafe { String::from_utf8_unchecked(splitted[0].to_vec()) };
+            let city = unsafe { std::str::from_utf8_unchecked(splitted[0]) };
             let float = parse_float(splitted[1]);
-            statistics.add(city, float);
+            statistics.add(city.to_string(), float);
         }
     }
     tx.send(statistics.0).unwrap();
@@ -56,25 +56,7 @@ impl Statistics {
         if let Some(rec) = self.0.get_mut(&city) {
             rec.add(t);
         } else {
-            self.0.insert(city, Record::from(t));
+            self.0.insert(city.to_string(), Record::from(t));
         };
-    }
-}
-
-struct CityRecord {
-    city: String,
-    temprature: f32,
-}
-
-impl From<&str> for CityRecord {
-    fn from(value: &str) -> Self {
-        let split = value.split(';').collect::<Vec<_>>();
-        Self {
-            city: split[0].to_string(),
-            temprature: split[1]
-                .trim()
-                .parse()
-                .expect(format!("{}", value).as_str()),
-        }
     }
 }
