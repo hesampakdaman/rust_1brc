@@ -8,8 +8,7 @@ use std::sync::mpsc;
 use std::thread;
 
 fn main() {
-    let args = std::env::args().collect::<Vec<String>>();
-    let file = File::open(args[1].clone()).expect("...");
+    let file = File::open("./measurements.txt").unwrap();
     let (tx, rx) = mpsc::channel();
     pre_processing::Partition::try_from(file)
         .unwrap()
@@ -19,5 +18,6 @@ fn main() {
             let tx_clone = tx.clone();
             thread::spawn(move || compute::stats(chunk, tx_clone));
         });
+    thread::sleep(std::time::Duration::from_secs(10));
     aggregate::reduce(rx);
 }
