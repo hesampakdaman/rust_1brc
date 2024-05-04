@@ -18,6 +18,6 @@ fn main() {
             let tx_clone = tx.clone();
             thread::spawn(move || compute::stats(chunk, tx_clone));
         });
-    thread::sleep(std::time::Duration::from_secs(10));
+    drop(tx);
     aggregate::reduce(rx);
 }

@@ -1,3 +1,4 @@
+#[derive(Debug)]
 pub struct Record {
     min: f32,
     max: f32,
@@ -21,6 +22,17 @@ impl Default for Record {
             max: 0.0,
             sum: 0.0,
             count: 0,
+        }
+    }
+}
+
+impl From<f32> for Record {
+    fn from(value: f32) -> Self {
+        Self {
+            min: value,
+            max: value,
+            sum: value,
+            count: 1,
         }
     }
 }
