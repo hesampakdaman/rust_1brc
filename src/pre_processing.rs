@@ -18,8 +18,8 @@ impl TryFrom<std::fs::File> for Partition {
 
 #[derive(Debug, PartialEq)]
 pub struct Chunk {
-    offset: u64,
-    size: u64,
+    pub offset: u64,
+    pub size: u64,
 }
 
 struct Splitter<T: io::Read + io::Seek> {
