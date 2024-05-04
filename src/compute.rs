@@ -13,13 +13,12 @@ pub fn stats(chunk: Chunk, tx: Sender<HashMap<String, Record>>) {
     reader.read_exact(&mut buf).unwrap();
     let mut statistics = Statistics(HashMap::new());
     for line in buf.split(|&b| b == b'\n') {
-        if line.len() == 0 {
-            break;
+        if line.len() > 0 {
+            let splitted: Vec<_> = line.split(|&b| b == b';').collect();
+            let city = unsafe { String::from_utf8_unchecked(splitted[0].to_vec()) };
+            let float = parse_float(splitted[1]);
+            statistics.add(city, float);
         }
-        let splitted: Vec<_> = line.split(|&b| b == b';').collect();
-        let city = unsafe { String::from_utf8_unchecked(splitted[0].to_vec()) };
-        let float = parse_float(splitted[1]);
-        statistics.add(city, float);
     }
     tx.send(statistics.0).unwrap();
 }
