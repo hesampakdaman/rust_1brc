@@ -1,6 +1,5 @@
 use std::collections::HashMap;
 use std::io::{Read, Seek};
-use std::str::FromStr;
 use std::sync::mpsc::Sender;
 
 use crate::pre_processing::Chunk;
@@ -18,13 +17,12 @@ pub fn stats(chunk: Chunk, tx: Sender<HashMap<String, Record>>) {
             break;
         }
         let splitted: Vec<_> = line.split(|&b| b == b';').collect();
-        let city = String::from_utf8_lossy(splitted[0]).into_owned();
+        let city = unsafe { String::from_utf8_unchecked(splitted[0].to_vec()) };
         let float = parse_float(splitted[1]);
         statistics.add(city, float);
     }
     tx.send(statistics.0).unwrap();
 }
-
 
 fn parse_float(bytes: &[u8]) -> f32 {
     let mut result = 0.0;
@@ -41,10 +39,10 @@ fn parse_float(bytes: &[u8]) -> f32 {
                 } else {
                     result = result * 10.0 + digit;
                 }
-            },
+            }
             b'.' => {
                 is_fraction = true;
-            },
+            }
             _ => {} // Handle unexpected characters or simply ignore based on the assumption of valid input
         }
     }
@@ -72,7 +70,12 @@ struct CityRecord {
 impl From<&str> for CityRecord {
     fn from(value: &str) -> Self {
         let split = value.split(';').collect::<Vec<_>>();
-        Self { city: split[0].to_string(), temprature: split[1].trim().parse().expect(format!("{}", value).as_str())}
+        Self {
+            city: split[0].to_string(),
+            temprature: split[1]
+                .trim()
+                .parse()
+                .expect(format!("{}", value).as_str()),
+        }
     }
 }
-
