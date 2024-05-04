@@ -1,5 +1,5 @@
 use std::collections::HashMap;
-use std::io::{BufReader, Read, Seek};
+use std::io::{Read, Seek};
 use std::sync::mpsc::Sender;
 
 use crate::pre_processing::Chunk;
@@ -12,7 +12,7 @@ pub fn stats(chunk: Chunk, tx: Sender<HashMap<String, Record>>) {
     reader.seek(std::io::SeekFrom::Start(chunk.offset)).unwrap();
     reader.read_exact(&mut buf).unwrap();
     let mut statistics = Statistics(HashMap::new());
-    for line in String::from_utf8(buf).unwrap().trim_end().split('\n') {
+    for line in String::from_utf8(buf).unwrap().split_terminator('\n') {
         statistics.add(line);
     }
     tx.send(statistics.0).unwrap();
@@ -39,10 +39,7 @@ struct CityRecord {
 impl From<&str> for CityRecord {
     fn from(value: &str) -> Self {
         let split = value.split(';').collect::<Vec<_>>();
-        if split.len() < 2 {
-            println!("{}", value);
-        }
-        Self { city: split[0].to_string(), temprature: split[1].trim().parse().unwrap() }
+        Self { city: split[0].to_string(), temprature: split[1].trim().parse().expect(format!("{}", value).as_str())}
     }
 }
 
