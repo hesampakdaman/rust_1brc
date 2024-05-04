@@ -15,9 +15,9 @@ pub fn stats(chunk: Chunk, tx: Sender<HashMap<String, Record>>) {
     for line in buf.split(|&b| b == b'\n') {
         if !line.is_empty() {
             let splitted: Vec<_> = line.split(|&b| b == b';').collect();
-            let city = unsafe { std::str::from_utf8_unchecked(splitted[0]) };
+            let city = unsafe { std::str::from_utf8_unchecked(splitted[0]).to_string() };
             let float = parse_float(splitted[1]);
-            statistics.add(city.to_string(), float);
+            statistics.add(city, float);
         }
     }
     tx.send(statistics.0).unwrap();
@@ -53,10 +53,6 @@ struct Statistics(HashMap<String, Record>);
 
 impl Statistics {
     fn add(&mut self, city: String, t: f32) {
-        if let Some(rec) = self.0.get_mut(&city) {
-            rec.add(t);
-        } else {
-            self.0.insert(city.to_string(), Record::from(t));
-        };
+        self.0.entry(city).or_insert(Record::default()).add(t);
     }
 }
