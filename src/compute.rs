@@ -24,7 +24,7 @@ impl Statistics {
     fn add(&mut self, line: &str) {
         let cr: CityRecord = line.into();
         if let Some(rec) = self.0.get_mut(&cr.city) {
-            rec.merge(cr.temprature);
+            rec.add(cr.temprature);
         } else {
             self.0.insert(cr.city, Record::from(cr.temprature));
         };

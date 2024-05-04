@@ -7,12 +7,20 @@ pub struct Record {
 }
 
 impl Record {
-    pub fn merge(&mut self, t: f32) {
+    pub fn merge(&mut self, other: Self) {
+        self.min = if other.min < self.min { other.min } else { self.min };
+        self.max = if other.max > self.max { other.max } else { self.max };
+        self.sum += other.sum;
+        self.count += other.count;
+    }
+
+    pub fn add(&mut self, t: f32) {
         self.min = if t < self.min { t } else { self.min };
         self.max = if t > self.max { t } else { self.max };
         self.sum += t;
         self.count += 1;
     }
+
 }
 
 impl Default for Record {
