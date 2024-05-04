@@ -12,13 +12,10 @@ pub fn stats(chunk: Chunk, tx: Sender<HashMap<String, Record>>) {
     reader.seek(std::io::SeekFrom::Start(chunk.offset)).unwrap();
     reader.read_exact(&mut buf).unwrap();
     let mut statistics = Statistics(HashMap::new());
-    for line in String::from_utf8(buf).unwrap().split('\n') {
-        if line.len() == 0 {
-            continue;
-        }
+    for line in String::from_utf8(buf).unwrap().trim_end().split('\n') {
         statistics.add(line);
     }
-    // tx.send(statistics.0).unwrap();
+    tx.send(statistics.0).unwrap();
 }
 
 struct Statistics(HashMap<String, Record>);
