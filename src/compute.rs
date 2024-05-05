@@ -28,27 +28,18 @@ fn compute(bytes: &[u8]) -> HashMap<String, Record> {
     map
 }
 
-fn parse_float(bytes: &[u8]) -> f32 {
-    let mut result = 0.0;
-    let mut divisor = 1.0;
-    let mut is_fraction = false;
-
+fn parse_float(bytes: &[u8]) -> i32 {
+    let mut result = 0;
+    let mut is_positive = true;
     for &b in bytes {
         match b {
             b'0'..=b'9' => {
-                let digit = (b - b'0') as f32;
-                if is_fraction {
-                    divisor *= 10.0;
-                    result += digit / divisor;
-                } else {
-                    result = result * 10.0 + digit;
-                }
+                let digit = (b - b'0') as i32;
+                result = result * 10 + digit;
             }
-            b'.' => {
-                is_fraction = true;
-            }
-            _ => {} // Handle unexpected characters or simply ignore based on the assumption of valid input
+            b'-' => {is_positive = false},
+            _ => {}
         }
     }
-    result
+    if is_positive { result} else { -result }
 }
