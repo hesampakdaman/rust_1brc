@@ -1,26 +1,29 @@
 use std::collections::HashMap;
-use std::io::{Read, Seek};
 use std::sync::mpsc::Sender;
-
+use memmap2::MmapOptions;
 use crate::pre_processing::Chunk;
 use crate::record::Record;
 
 pub fn stats(chunk: Chunk, tx: Sender<HashMap<String, Record>>) {
-    let f = std::fs::File::open("./measurements.txt").unwrap();
-    let mut reader = std::io::BufReader::new(f);
-    let mut buf = vec![0; chunk.size as usize];
-    reader.seek(std::io::SeekFrom::Start(chunk.offset)).unwrap();
-    reader.read_exact(&mut buf).unwrap();
-    let mut statistics = Statistics(HashMap::new());
-    for line in buf.split(|&b| b == b'\n') {
+    let file = std::fs::File::open("./measurements.txt").unwrap();
+    let mmap = unsafe { MmapOptions::new().map(&file).unwrap() };
+    let start = chunk.offset as usize;
+    let end = start + chunk.size as usize;
+    let segment = &mmap[start..end];
+    let mut map: HashMap<Vec<u8>, Record> = HashMap::new();
+    for line in segment.split(|&b| b == b'\n') {
         if !line.is_empty() {
-            let splitted: Vec<_> = line.split(|&b| b == b';').collect();
-            let city = unsafe { std::str::from_utf8_unchecked(splitted[0]).to_string() };
-            let float = parse_float(splitted[1]);
-            statistics.add(city, float);
+            let mut splitted = line.split(|&b| b == b';');
+            let city = splitted.next().unwrap();
+            let float = parse_float(splitted.next().unwrap());
+            if let Some(rec) = map.get_mut(city) {
+                rec.add(float);
+            } else {
+                map.insert(city.to_vec(), Record::from(float));
+            }
         }
     }
-    tx.send(statistics.0).unwrap();
+    // tx.send(statistics.0).unwrap();
 }
 
 fn parse_float(bytes: &[u8]) -> f32 {
@@ -50,9 +53,3 @@ fn parse_float(bytes: &[u8]) -> f32 {
 }
 
 struct Statistics(HashMap<String, Record>);
-
-impl Statistics {
-    fn add(&mut self, city: String, t: f32) {
-        self.0.entry(city).or_insert(Record::default()).add(t);
-    }
-}
