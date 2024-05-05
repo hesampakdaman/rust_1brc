@@ -1,29 +1,31 @@
-use std::collections::HashMap;
-use std::sync::mpsc::Sender;
-use memmap2::MmapOptions;
 use crate::pre_processing::Chunk;
 use crate::record::Record;
+use memmap2::MmapOptions;
+use std::collections::HashMap;
+use std::sync::mpsc::Sender;
 
 pub fn stats(chunk: Chunk, tx: Sender<HashMap<String, Record>>) {
     let file = std::fs::File::open("./measurements.txt").unwrap();
     let mmap = unsafe { MmapOptions::new().map(&file).unwrap() };
-    let start = chunk.offset as usize;
-    let end = start + chunk.size as usize;
-    let segment = &mmap[start..end];
-    let mut map: HashMap<Vec<u8>, Record> = HashMap::new();
-    for line in segment.split(|&b| b == b'\n') {
+    let map = compute(&mmap[chunk.offset as usize..(chunk.offset+chunk.size) as usize]);
+    tx.send(map).unwrap();
+}
+
+fn compute(bytes: &[u8]) -> HashMap<String, Record> {
+    let mut map: HashMap<String, Record> = HashMap::with_capacity(10_000);
+    for line in bytes.split(|&b| b == b'\n') {
         if !line.is_empty() {
             let mut splitted = line.split(|&b| b == b';');
-            let city = splitted.next().unwrap();
+            let city = unsafe { std::str::from_utf8_unchecked(splitted.next().unwrap()) };
             let float = parse_float(splitted.next().unwrap());
             if let Some(rec) = map.get_mut(city) {
                 rec.add(float);
             } else {
-                map.insert(city.to_vec(), Record::from(float));
+                map.insert(city.to_string(), Record::from(float));
             }
         }
     }
-    // tx.send(statistics.0).unwrap();
+    map
 }
 
 fn parse_float(bytes: &[u8]) -> f32 {
@@ -48,8 +50,5 @@ fn parse_float(bytes: &[u8]) -> f32 {
             _ => {} // Handle unexpected characters or simply ignore based on the assumption of valid input
         }
     }
-
     result
 }
-
-struct Statistics(HashMap<String, Record>);
