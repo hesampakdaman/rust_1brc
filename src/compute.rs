@@ -7,8 +7,8 @@ use std::sync::mpsc::Sender;
 pub fn stats(chunk: Chunk, tx: Sender<HashMap<String, Record>>) {
     let file = std::fs::File::open("./measurements.txt").unwrap();
     let mmap = unsafe { MmapOptions::new().map(&file).unwrap() };
-    let map = compute(&mmap[chunk.offset as usize..(chunk.offset+chunk.size) as usize]);
-    tx.send(map).unwrap();
+    let hmap = compute(&mmap[chunk.offset as usize..(chunk.offset+chunk.size) as usize]);
+    tx.send(hmap).unwrap();
 }
 
 fn compute(bytes: &[u8]) -> HashMap<String, Record> {
