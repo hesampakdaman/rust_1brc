@@ -11,7 +11,7 @@ impl TryFrom<&Mmap> for Partition {
     fn try_from(mmap: &Mmap) -> Result<Self, Self::Error> {
         let bytes = mmap.len();
         let n_threads = std::thread::available_parallelism()?.get();
-        let splitter = Splitter::new(&mmap[..], (bytes / n_threads) as u64, bytes as i64);
+        let splitter = Splitter::new(mmap, (bytes / n_threads) as u64);
         splitter.partition()
     }
 }
@@ -29,7 +29,8 @@ struct Splitter<'a> {
 }
 
 impl<'a> Splitter<'a> {
-    fn new(bytes: &'a [u8], chunk_size: u64, remaining_bytes: i64) -> Self {
+    fn new(bytes: &'a [u8], chunk_size: u64) -> Self {
+        let remaining_bytes = bytes.len() as i64;
         Self {
             bytes,
             chunk_size,
@@ -41,9 +42,7 @@ impl<'a> Splitter<'a> {
         let mut segments = Vec::new();
         let mut offset: u64 = 0;
         while self.remaining_bytes > 0 {
-            let estimated_end = std::cmp::min(self.chunk_size, self.remaining_bytes as u64);
-            let extra = self.next_chunk_size(&self.bytes[(offset + estimated_end) as usize..])?;
-            let size = estimated_end + extra;
+            let size = self.next_chunk_size(offset)?;
             segments.push(Chunk { offset, size });
             offset += size;
             self.remaining_bytes -= size as i64;
@@ -51,15 +50,14 @@ impl<'a> Splitter<'a> {
         Ok(Partition { chunks: segments })
     }
 
-    fn next_chunk_size(&mut self, bytes: &'a [u8]) -> Result<u64, io::Error> {
-        if bytes.len() == 0 {
-            return Ok(0);
-        };
+    fn next_chunk_size(&mut self, offset: u64) -> Result<u64, io::Error> {
+        let estimated_end = std::cmp::min(self.chunk_size, self.remaining_bytes as u64);
+        let bytes = &self.bytes[(offset+estimated_end) as usize..];
         let mut i = 0;
         while  i < bytes.len() && bytes[i] != b'\n' {
             i += 1;
         }
-        Ok(i as u64)
+        Ok(estimated_end + i as u64)
     }
 }
 
@@ -97,7 +95,7 @@ mod tests {
  Nam vitae gravida tortor.
 ";
         let bytes = data.as_bytes();
-        let partition = Splitter::new(bytes, 4, bytes.len() as i64)
+        let partition = Splitter::new(bytes, 4)
             .partition()
             .unwrap();
         check(partition, data);
