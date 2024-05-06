@@ -1,54 +1,41 @@
+#[derive(Debug, Default, PartialEq, Eq)]
 pub struct Record {
-    min: f32,
-    max: f32,
-    sum: f32,
+    min: i32,
+    max: i32,
+    sum: i32,
     count: usize,
 }
 
 impl Record {
-    pub fn merge(&mut self, t: f32) {
-        self.min = if t < self.min { t } else { self.min };
-        self.max = if t > self.max { t } else { self.max };
+    pub fn new(min: i32, max: i32, sum: i32, count: usize) -> Self {
+        Self {
+            min, max, sum, count
+        }
+
+    }
+
+    pub fn merge(&mut self, other: Self) {
+        self.min = std::cmp::min(self.min, other.min);
+        self.max = std::cmp::max(self.max, other.max);
+        self.sum += other.sum;
+        self.count += other.count;
+    }
+
+    pub fn add(&mut self, t: i32) {
+        self.min = std::cmp::min(self.min, t);
+        self.max = std::cmp::max(self.max, t);
         self.sum += t;
         self.count += 1;
     }
 }
 
-impl Default for Record {
-    fn default() -> Self {
+impl From<i32> for Record {
+    fn from(value: i32) -> Self {
         Self {
-            min: 0.0,
-            max: 0.0,
-            sum: 0.0,
-            count: 0,
-        }
-    }
-}
-
-impl TryFrom<&str> for Record {
-    type Error = String;
-
-    fn try_from(value: &str) -> Result<Self, Self::Error> {
-        let t: f32 = value.split(';').collect::<Vec<_>>()[1]
-            .parse()
-            .map_err(|_| "Could not parse temprature")?;
-        Ok(Record {
-            min: t,
-            max: t,
-            sum: t,
+            min: value,
+            max: value,
+            sum: value,
             count: 1,
-        })
-    }
-}
-
-impl std::fmt::Display for Record {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(
-            f,
-            "{}/{}/{}",
-            self.min,
-            self.max,
-            self.sum / self.count as f32
-        )
+        }
     }
 }
