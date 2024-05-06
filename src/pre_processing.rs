@@ -19,8 +19,7 @@ impl TryFrom<&Mmap> for Partition {
 
     fn try_from(bytes: &Mmap) -> Result<Self, Self::Error> {
         let n_threads = std::thread::available_parallelism()?.get();
-        let splitter = Splitter::new(bytes, n_threads);
-        Ok(splitter.partition())
+        Ok(Splitter::new(bytes, n_threads).partition())
     }
 }
 
