@@ -11,25 +11,25 @@ impl TryFrom<&Mmap> for Partition {
     fn try_from(mmap: &Mmap) -> Result<Self, Self::Error> {
         let bytes = mmap.len();
         let n_threads = std::thread::available_parallelism()?.get();
-        let splitter = Splitter::new(mmap, (bytes / n_threads) as u64);
+        let splitter = Splitter::new(mmap, bytes / n_threads);
         splitter.partition()
     }
 }
 
 #[derive(Debug, PartialEq)]
 pub struct Chunk {
-    pub offset: u64,
-    pub size: u64,
+    pub start: usize,
+    pub end: usize,
 }
 
 struct Splitter<'a> {
     bytes: &'a [u8],
-    chunk_size: u64,
+    chunk_size: usize,
     remaining_bytes: i64,
 }
 
 impl<'a> Splitter<'a> {
-    fn new(bytes: &'a [u8], chunk_size: u64) -> Self {
+    fn new(bytes: &'a [u8], chunk_size: usize) -> Self {
         let remaining_bytes = bytes.len() as i64;
         Self {
             bytes,
@@ -40,24 +40,24 @@ impl<'a> Splitter<'a> {
 
     fn partition(mut self) -> Result<Partition, io::Error> {
         let mut segments = Vec::new();
-        let mut offset: u64 = 0;
+        let mut start = 0;
         while self.remaining_bytes > 0 {
-            let size = self.next_chunk_size(offset)?;
-            segments.push(Chunk { offset, size });
-            offset += size;
-            self.remaining_bytes -= size as i64;
+            let end = self.get_chunk_end(start);
+            segments.push(Chunk { start, end });
+            self.remaining_bytes -= (end - start) as i64;
+            start = end;
         }
         Ok(Partition { chunks: segments })
     }
 
-    fn next_chunk_size(&mut self, offset: u64) -> Result<u64, io::Error> {
-        let estimated_end = std::cmp::min(self.chunk_size, self.remaining_bytes as u64);
-        let bytes = &self.bytes[(offset+estimated_end) as usize..];
+    fn get_chunk_end(&mut self, start: usize) -> usize {
+        let size_estimate = std::cmp::min(self.chunk_size, self.remaining_bytes as usize);
+        let end_bytes = &self.bytes[(start + size_estimate)..];
         let mut i = 0;
-        while  i < bytes.len() && bytes[i] != b'\n' {
+        while i < end_bytes.len() && end_bytes[i] != b'\n' {
             i += 1;
         }
-        Ok(estimated_end + i as u64)
+        start + size_estimate + i
     }
 }
 
@@ -71,14 +71,16 @@ mod tests {
         let mut actual = Vec::new();
         for chunk in &partition.chunks {
             let mut reader = io::BufReader::new(contents.clone());
-            let mut buffer = vec![0; chunk.size as usize];
-            reader.seek(io::SeekFrom::Start(chunk.offset)).unwrap();
+            let mut buffer = vec![0; chunk.end - chunk.start];
+            reader
+                .seek(io::SeekFrom::Start(chunk.start as u64))
+                .unwrap();
             reader.read(&mut buffer).unwrap();
             actual.extend_from_slice(&buffer);
         }
         assert_eq!(String::from_utf8(actual).unwrap(), expected.to_string());
         assert_eq!(
-            partition.chunks.iter().map(|p| p.size).sum::<u64>() as usize,
+            partition.chunks.iter().map(|p| p.end - p.start).sum::<usize>(),
             expected.as_bytes().len()
         );
     }
@@ -92,12 +94,9 @@ mod tests {
  Lorem ipsum dolor sit amet, consectetur adipiscing elit.
  Nam laoreet enim in condimentum semper.
  Ut vel leo faucibus, sodales augue volutpat, lobortis urna.
- Nam vitae gravida tortor.
-";
+ Nam vitae gravida tortor.";
         let bytes = data.as_bytes();
-        let partition = Splitter::new(bytes, 4)
-            .partition()
-            .unwrap();
+        let partition = Splitter::new(bytes, 4).partition().unwrap();
         check(partition, data);
     }
 }
