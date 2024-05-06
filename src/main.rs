@@ -4,6 +4,7 @@ mod pre_processing;
 mod record;
 
 use memmap2::MmapOptions;
+use std::borrow::Borrow;
 use std::fs::File;
 use std::sync::mpsc;
 use std::sync::Arc;
@@ -13,7 +14,7 @@ fn main() {
     let file = File::open("./measurements.txt").unwrap();
     let mmap = Arc::new(unsafe { MmapOptions::new().map(&file).unwrap() });
     let (tx, rx) = mpsc::channel();
-    pre_processing::Partition::try_from(file)
+    pre_processing::Partition::try_from(mmap.borrow())
         .unwrap()
         .chunks
         .into_iter()

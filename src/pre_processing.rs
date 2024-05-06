@@ -1,17 +1,17 @@
-use std::io::{self, BufRead, BufReader, Seek};
+use memmap2::Mmap;
+use std::io;
 
 pub struct Partition {
     pub chunks: Vec<Chunk>,
 }
 
-impl TryFrom<std::fs::File> for Partition {
+impl TryFrom<&Mmap> for Partition {
     type Error = io::Error;
 
-    fn try_from(file: std::fs::File) -> Result<Self, Self::Error> {
-        let bytes = file.metadata()?.len();
-        let reader = io::BufReader::new(file);
-        let n_threads = std::thread::available_parallelism()?.get().max(1) as u64;
-        let splitter = Splitter::new(reader, bytes / n_threads, bytes as i64);
+    fn try_from(mmap: &Mmap) -> Result<Self, Self::Error> {
+        let bytes = mmap.len();
+        let n_threads = std::thread::available_parallelism()?.get();
+        let splitter = Splitter::new(&mmap[..], (bytes / n_threads) as u64, bytes as i64);
         splitter.partition()
     }
 }
@@ -22,16 +22,16 @@ pub struct Chunk {
     pub size: u64,
 }
 
-struct Splitter<T: io::Read + io::Seek> {
-    reader: BufReader<T>,
+struct Splitter<'a> {
+    bytes: &'a [u8],
     chunk_size: u64,
     remaining_bytes: i64,
 }
 
-impl<T: io::Read + io::Seek> Splitter<T> {
-    fn new(reader: BufReader<T>, chunk_size: u64, remaining_bytes: i64) -> Self {
+impl<'a> Splitter<'a> {
+    fn new(bytes: &'a [u8], chunk_size: u64, remaining_bytes: i64) -> Self {
         Self {
-            reader,
+            bytes,
             chunk_size,
             remaining_bytes,
         }
@@ -40,9 +40,10 @@ impl<T: io::Read + io::Seek> Splitter<T> {
     fn partition(mut self) -> Result<Partition, io::Error> {
         let mut segments = Vec::new();
         let mut offset: u64 = 0;
-        let mut buf: Vec<u8> = Vec::with_capacity(self.chunk_size as usize);
         while self.remaining_bytes > 0 {
-            let size = self.next_chunk_size(offset, &mut buf)?;
+            let estimated_end = std::cmp::min(self.chunk_size, self.remaining_bytes as u64);
+            let extra = self.next_chunk_size(&self.bytes[(offset + estimated_end) as usize..])?;
+            let size = estimated_end + extra;
             segments.push(Chunk { offset, size });
             offset += size;
             self.remaining_bytes -= size as i64;
@@ -50,19 +51,22 @@ impl<T: io::Read + io::Seek> Splitter<T> {
         Ok(Partition { chunks: segments })
     }
 
-    fn next_chunk_size(&mut self, offset: u64, buf: &mut Vec<u8>) -> Result<u64, io::Error> {
-        let next_chunk = self.chunk_size.min(self.remaining_bytes as u64);
-        self.reader.seek(io::SeekFrom::Start(offset + next_chunk))?;
-        let extra = self.reader.read_until(b'\n', buf)? as u64;
-        buf.clear();
-        Ok(next_chunk + extra)
+    fn next_chunk_size(&mut self, bytes: &'a [u8]) -> Result<u64, io::Error> {
+        if bytes.len() == 0 {
+            return Ok(0);
+        };
+        let mut i = 0;
+        while  i < bytes.len() && bytes[i] != b'\n' {
+            i += 1;
+        }
+        Ok(i as u64)
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::io::{Cursor, Read, Seek};
+    use std::io::{Read, Seek};
 
     fn check(partition: Partition, expected: &str) {
         let contents = io::Cursor::new(expected.as_bytes());
@@ -90,10 +94,10 @@ mod tests {
  Lorem ipsum dolor sit amet, consectetur adipiscing elit.
  Nam laoreet enim in condimentum semper.
  Ut vel leo faucibus, sodales augue volutpat, lobortis urna.
- Nam vitae gravida tortor.";
-        let reader = BufReader::new(Cursor::new(data));
+ Nam vitae gravida tortor.
+";
         let bytes = data.as_bytes();
-        let partition = Splitter::new(reader, 4, bytes.len() as i64)
+        let partition = Splitter::new(bytes, 4, bytes.len() as i64)
             .partition()
             .unwrap();
         check(partition, data);
