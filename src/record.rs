@@ -8,16 +8,8 @@ pub struct Record {
 
 impl Record {
     pub fn merge(&mut self, other: Self) {
-        self.min = if other.min < self.min {
-            other.min
-        } else {
-            self.min
-        };
-        self.max = if other.max > self.max {
-            other.max
-        } else {
-            self.max
-        };
+        self.min = std::cmp::min(self.min, other.min);
+        self.max = std::cmp::max(self.max, other.max);
         self.sum += other.sum;
         self.count += other.count;
     }
