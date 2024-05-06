@@ -1,6 +1,8 @@
 use memmap2::Mmap;
 use std::io;
 
+pub type Chunk = std::ops::Range<usize>;
+
 pub struct Partition {
     pub chunks: Vec<Chunk>,
 }
@@ -13,12 +15,6 @@ impl TryFrom<&Mmap> for Partition {
         let splitter = Splitter::new(bytes, n_threads);
         Ok(splitter.partition())
     }
-}
-
-#[derive(Debug, PartialEq)]
-pub struct Chunk {
-    pub start: usize,
-    pub end: usize,
 }
 
 struct Splitter<'a> {
@@ -43,7 +39,7 @@ impl<'a> Splitter<'a> {
         let mut start = 0;
         while self.remaining_bytes > 0 {
             let end = self.get_chunk_end(start);
-            segments.push(Chunk { start, end });
+            segments.push(start..end);
             self.remaining_bytes -= (end - start) as i64;
             start = end;
         }
@@ -71,7 +67,7 @@ mod tests {
         let contents = io::Cursor::new(bytes);
         for (i, chunk) in partition.chunks.iter().enumerate() {
             let mut reader = io::BufReader::new(contents.clone());
-            let mut buffer = vec![0; chunk.end - chunk.start];
+            let mut buffer = vec![0; chunk.len()];
             reader
                 .seek(io::SeekFrom::Start(chunk.start as u64))
                 .unwrap();
@@ -81,7 +77,7 @@ mod tests {
         let actual_bytes_read = partition
             .chunks
             .iter()
-            .map(|p| p.end - p.start)
+            .map(|p| p.len())
             .sum::<usize>();
         assert_eq!(actual_bytes_read, bytes.len());
     }
@@ -94,7 +90,8 @@ Nunc ac tempus sapien,
 nec eleifend lacus. Curabitur vel imperdiet massa. Phasellus interdum
 mattis eros quis iaculis. Nullam sed nulla vel dui pellentesque
 bibendum quis et mauris. Integer vestibulum elementum metus,
-in convallis arcu lectus.".trim_start();
+in convallis arcu lectus."
+            .trim_start();
         let expected = vec![
             "Lorem ipsum dolor sit amet, consectetur adipiscing elit.\nNunc ac tempus sapien,\n",
             "nec eleifend lacus. Curabitur vel imperdiet massa. Phasellus interdum\n",

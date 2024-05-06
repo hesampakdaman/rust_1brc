@@ -6,7 +6,7 @@ use std::sync::mpsc::Sender;
 use std::sync::Arc;
 
 pub fn stats(mmap: Arc<Mmap>, chunk: Chunk, tx: Sender<HashMap<String, Record>>) {
-    let hmap = calculate(&mmap[chunk.start..chunk.end]);
+    let hmap = calculate(&mmap[chunk]);
     tx.send(hmap).unwrap();
 }
 
