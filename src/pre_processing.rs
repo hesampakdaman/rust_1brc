@@ -87,7 +87,7 @@ mod tests {
     }
 
     #[test]
-    fn test() {
+    fn partition() {
         let data = "
 Lorem ipsum dolor sit amet, consectetur adipiscing elit.
 Nunc ac tempus sapien,
@@ -103,7 +103,6 @@ in convallis arcu lectus.".trim_start();
             "in convallis arcu lectus.",
         ];
         let bytes = data.as_bytes();
-        println!("{}, {}", bytes.len(), bytes.len() / 5);
         let n_chunks = 5;
         let partition = Splitter::new(bytes, n_chunks).partition().unwrap();
         check(partition, bytes, expected);
