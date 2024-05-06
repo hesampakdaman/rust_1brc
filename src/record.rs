@@ -1,4 +1,4 @@
-#[derive(Debug)]
+#[derive(Debug, Default)]
 pub struct Record {
     min: i32,
     max: i32,
@@ -27,17 +27,6 @@ impl Record {
         self.max = t.max(self.max);
         self.sum += t;
         self.count += 1;
-    }
-}
-
-impl Default for Record {
-    fn default() -> Self {
-        Self {
-            min: 0,
-            max: 0,
-            sum: 0,
-            count: 0,
-        }
     }
 }
 
