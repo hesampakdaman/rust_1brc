@@ -8,10 +8,10 @@ pub struct Partition {
 impl TryFrom<&Mmap> for Partition {
     type Error = io::Error;
 
-    fn try_from(mmap: &Mmap) -> Result<Self, Self::Error> {
+    fn try_from(bytes: &Mmap) -> Result<Self, Self::Error> {
         let n_threads = std::thread::available_parallelism()?.get();
-        let splitter = Splitter::new(mmap, n_threads);
-        splitter.partition()
+        let splitter = Splitter::new(bytes, n_threads);
+        Ok(splitter.partition())
     }
 }
 
@@ -38,7 +38,7 @@ impl<'a> Splitter<'a> {
         }
     }
 
-    fn partition(mut self) -> Result<Partition, io::Error> {
+    fn partition(mut self) -> Partition {
         let mut segments = Vec::new();
         let mut start = 0;
         while self.remaining_bytes > 0 {
@@ -47,7 +47,7 @@ impl<'a> Splitter<'a> {
             self.remaining_bytes -= (end - start) as i64;
             start = end;
         }
-        Ok(Partition { chunks: segments })
+        Partition { chunks: segments }
     }
 
     fn get_chunk_end(&mut self, start: usize) -> usize {
@@ -58,7 +58,7 @@ impl<'a> Splitter<'a> {
             .iter()
             .position(|&b| b == b'\n')
             .unwrap_or(0);
-        return start + self.chunk_size + size_to_newline + 1;
+        start + self.chunk_size + size_to_newline + 1
     }
 }
 
@@ -104,7 +104,7 @@ in convallis arcu lectus.".trim_start();
         ];
         let bytes = data.as_bytes();
         let n_chunks = 5;
-        let partition = Splitter::new(bytes, n_chunks).partition().unwrap();
+        let partition = Splitter::new(bytes, n_chunks).partition();
         check(partition, bytes, expected);
     }
 }
