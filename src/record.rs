@@ -40,15 +40,3 @@ impl From<i32> for Record {
         }
     }
 }
-
-// impl std::fmt::Display for Record {
-//     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-//         write!(
-//             f,
-//             "{}/{}/{}",
-//             self.min,
-//             self.max,
-//             self.sum / self.count as f32
-//         )
-//     }
-// }
