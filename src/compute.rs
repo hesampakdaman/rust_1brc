@@ -1,13 +1,12 @@
 use crate::pre_processing::Chunk;
 use crate::record::Record;
-use memmap2::MmapOptions;
+use memmap2::Mmap;
 use std::collections::HashMap;
 use std::sync::mpsc::Sender;
+use std::sync::Arc;
 
-pub fn stats(chunk: Chunk, tx: Sender<HashMap<String, Record>>) {
-    let file = std::fs::File::open("./measurements.txt").unwrap();
-    let mmap = unsafe { MmapOptions::new().map(&file).unwrap() };
-    let hmap = compute(&mmap[chunk.offset as usize..(chunk.offset+chunk.size) as usize]);
+pub fn stats(mmap: Arc<Mmap>, chunk: Chunk, tx: Sender<HashMap<String, Record>>) {
+    let hmap = compute(&mmap[chunk.offset as usize..(chunk.offset + chunk.size) as usize]);
     tx.send(hmap).unwrap();
 }
 
@@ -30,16 +29,19 @@ fn compute(bytes: &[u8]) -> HashMap<String, Record> {
 
 fn parse_float(bytes: &[u8]) -> i32 {
     let mut result = 0;
-    let mut is_positive = true;
+    let mut is_negative = false;
     for &b in bytes {
         match b {
             b'0'..=b'9' => {
                 let digit = (b - b'0') as i32;
                 result = result * 10 + digit;
             }
-            b'-' => {is_positive = false},
+            b'-' => is_negative = true,
             _ => {}
         }
     }
-    if is_positive { result} else { -result }
+    if is_negative {
+        result *= -1;
+    }
+    result
 }
