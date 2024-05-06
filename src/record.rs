@@ -1,4 +1,4 @@
-#[derive(Debug, Default)]
+#[derive(Debug, Default, PartialEq, Eq)]
 pub struct Record {
     min: i32,
     max: i32,
@@ -7,6 +7,13 @@ pub struct Record {
 }
 
 impl Record {
+    pub fn new(min: i32, max: i32, sum: i32, count: usize) -> Self {
+        Self {
+            min, max, sum, count
+        }
+
+    }
+
     pub fn merge(&mut self, other: Self) {
         self.min = std::cmp::min(self.min, other.min);
         self.max = std::cmp::max(self.max, other.max);
@@ -15,8 +22,8 @@ impl Record {
     }
 
     pub fn add(&mut self, t: i32) {
-        self.min = t.min(self.min);
-        self.max = t.max(self.max);
+        self.min = std::cmp::min(self.min, t);
+        self.max = std::cmp::max(self.max, t);
         self.sum += t;
         self.count += 1;
     }
