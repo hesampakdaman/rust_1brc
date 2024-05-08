@@ -4,12 +4,12 @@ use std::sync::mpsc::Receiver;
 use crate::record::Record;
 
 pub fn reduce(rx: Receiver<HashMap<String, Record>>) -> Vec<(String, Record)> {
-    let mut hmap: HashMap<String, Record> = HashMap::new();
+    let mut hmap = HashMap::with_capacity(10_000);
     while let Ok(stats) = rx.recv() {
-        for (city, new) in stats {
+        for (city, record) in stats {
             hmap.entry(city)
-                .and_modify(|exist| exist.merge(&new))
-                .or_insert(new);
+                .and_modify(|existing: &mut Record| existing.merge(&record))
+                .or_insert(record);
         }
     }
     let mut v = hmap.into_iter().collect::<Vec<_>>();
