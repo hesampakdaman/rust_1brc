@@ -80,11 +80,7 @@ mod tests {
             reader.read(&mut buffer).unwrap();
             assert_eq!(std::str::from_utf8(&buffer).unwrap(), expected[i]);
         }
-        let actual_bytes_read = partition
-            .chunks
-            .iter()
-            .map(|p| p.0.len())
-            .sum::<usize>();
+        let actual_bytes_read = partition.chunks.iter().map(|p| p.0.len()).sum::<usize>();
         assert_eq!(actual_bytes_read, bytes.len());
     }
 
