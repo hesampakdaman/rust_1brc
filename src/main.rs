@@ -24,5 +24,17 @@ fn main() {
             thread::spawn(move || compute::stats(mmap_clone, chunk, tx_clone));
         });
     drop(tx);
-    aggregate::reduce(rx);
+    print_results(&aggregate::reduce(rx));
+}
+
+fn print_results(v: &[(String, record::Record)]) {
+    print!("{{");
+    for (i, (name, r)) in v.iter().enumerate() {
+        if i < v.len() - 1 {
+            print!("{name}: {r}, ");
+        } else {
+            print!("{name}: {r}");
+        }
+    }
+    println!("}}")
 }
