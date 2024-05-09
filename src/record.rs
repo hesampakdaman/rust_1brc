@@ -7,6 +7,7 @@ pub struct Record {
 }
 
 impl Record {
+    #[cfg(test)]
     pub fn new(min: i32, max: i32, sum: i32, count: usize) -> Self {
         Self {
             min,
