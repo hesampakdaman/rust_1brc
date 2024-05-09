@@ -1,12 +1,9 @@
-use crate::pre_processing::Chunk;
 use crate::record::Record;
-use memmap2::Mmap;
 use std::collections::HashMap;
 use std::sync::mpsc::Sender;
-use std::sync::Arc;
 
-pub fn stats(mmap: Arc<Mmap>, chunk: Chunk, tx: Sender<HashMap<String, Record>>) {
-    let hmap = calculate(&mmap[chunk.offset as usize..(chunk.offset + chunk.size) as usize]);
+pub fn stats(bytes: &[u8], tx: Sender<HashMap<String, Record>>) {
+    let hmap = calculate(bytes);
     tx.send(hmap).unwrap();
 }
 
@@ -16,11 +13,11 @@ fn calculate(bytes: &[u8]) -> HashMap<String, Record> {
         if !line.is_empty() {
             let mut splitted = line.split(|&b| b == b';');
             let city = unsafe { std::str::from_utf8_unchecked(splitted.next().unwrap()) };
-            let float = parse_float(splitted.next().unwrap());
+            let num = parse_float(splitted.next().unwrap());
             if let Some(rec) = map.get_mut(city) {
-                rec.add(float);
+                rec.add(num);
             } else {
-                map.insert(city.to_string(), Record::from(float));
+                map.insert(city.to_string(), Record::from(num));
             }
         }
     }

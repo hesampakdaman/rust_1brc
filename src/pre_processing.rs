@@ -1,101 +1,101 @@
-use std::io::{self, BufRead, BufReader, Seek};
+use memmap2::Mmap;
+use std::io;
+use std::ops::Range;
 
 pub struct Partition {
-    pub chunks: Vec<Chunk>,
+    pub chunks: Vec<Range<usize>>,
 }
 
-impl TryFrom<std::fs::File> for Partition {
+impl TryFrom<&Mmap> for Partition {
     type Error = io::Error;
 
-    fn try_from(file: std::fs::File) -> Result<Self, Self::Error> {
-        let bytes = file.metadata()?.len();
-        let reader = io::BufReader::new(file);
-        let n_threads = std::thread::available_parallelism()?.get().max(1) as u64;
-        let splitter = Splitter::new(reader, bytes / n_threads, bytes as i64);
-        splitter.partition()
+    fn try_from(bytes: &Mmap) -> Result<Self, Self::Error> {
+        let n_threads = std::thread::available_parallelism()?.get();
+        Ok(Splitter::new(bytes, n_threads).partition())
     }
 }
 
-#[derive(Debug, PartialEq)]
-pub struct Chunk {
-    pub offset: u64,
-    pub size: u64,
-}
-
-struct Splitter<T: io::Read + io::Seek> {
-    reader: BufReader<T>,
-    chunk_size: u64,
+struct Splitter<'a> {
+    bytes: &'a [u8],
+    chunk_size: usize,
     remaining_bytes: i64,
 }
 
-impl<T: io::Read + io::Seek> Splitter<T> {
-    fn new(reader: BufReader<T>, chunk_size: u64, remaining_bytes: i64) -> Self {
+impl<'a> Splitter<'a> {
+    fn new(bytes: &'a [u8], n: usize) -> Self {
+        let remaining_bytes = bytes.len() as i64;
+        let chunk_size = bytes.len() / n;
         Self {
-            reader,
+            bytes,
             chunk_size,
             remaining_bytes,
         }
     }
 
-    fn partition(mut self) -> Result<Partition, io::Error> {
+    fn partition(mut self) -> Partition {
         let mut segments = Vec::new();
-        let mut offset: u64 = 0;
-        let mut buf: Vec<u8> = Vec::with_capacity(self.chunk_size as usize);
+        let mut start = 0;
         while self.remaining_bytes > 0 {
-            let size = self.next_chunk_size(offset, &mut buf)?;
-            segments.push(Chunk { offset, size });
-            offset += size;
-            self.remaining_bytes -= size as i64;
+            let end = self.get_chunk_end(start);
+            segments.push(start..end);
+            self.remaining_bytes -= (end - start) as i64;
+            start = end;
         }
-        Ok(Partition { chunks: segments })
+        Partition { chunks: segments }
     }
 
-    fn next_chunk_size(&mut self, offset: u64, buf: &mut Vec<u8>) -> Result<u64, io::Error> {
-        let next_chunk = self.chunk_size.min(self.remaining_bytes as u64);
-        self.reader.seek(io::SeekFrom::Start(offset + next_chunk))?;
-        let extra = self.reader.read_until(b'\n', buf)? as u64;
-        buf.clear();
-        Ok(next_chunk + extra)
+    fn get_chunk_end(&mut self, start: usize) -> usize {
+        if self.remaining_bytes < self.chunk_size as i64 {
+            return start + self.remaining_bytes as usize;
+        }
+        let size_to_newline = self.bytes[(start + self.chunk_size)..]
+            .iter()
+            .position(|&b| b == b'\n')
+            .unwrap_or(0);
+        start + self.chunk_size + size_to_newline + 1
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::io::{Cursor, Read, Seek};
+    use std::io::{Read, Seek};
 
-    fn check(partition: Partition, expected: &str) {
-        let contents = io::Cursor::new(expected.as_bytes());
-        let mut actual = Vec::new();
-        for chunk in &partition.chunks {
+    fn check(partition: Partition, bytes: &[u8], expected: Vec<&str>) {
+        let contents = io::Cursor::new(bytes);
+        for (i, chunk) in partition.chunks.iter().enumerate() {
             let mut reader = io::BufReader::new(contents.clone());
-            let mut buffer = vec![0; chunk.size as usize];
-            reader.seek(io::SeekFrom::Start(chunk.offset)).unwrap();
+            let mut buffer = vec![0; chunk.len()];
+            reader
+                .seek(io::SeekFrom::Start(chunk.start as u64))
+                .unwrap();
             reader.read(&mut buffer).unwrap();
-            actual.extend_from_slice(&buffer);
+            assert_eq!(std::str::from_utf8(&buffer).unwrap(), expected[i]);
         }
-        assert_eq!(String::from_utf8(actual).unwrap(), expected.to_string());
-        assert_eq!(
-            partition.chunks.iter().map(|p| p.size).sum::<u64>() as usize,
-            expected.as_bytes().len()
-        );
+        let actual_bytes_read = partition.chunks.iter().map(|p| p.len()).sum::<usize>();
+        assert_eq!(actual_bytes_read, bytes.len());
     }
 
     #[test]
-    fn test() {
-        let data = "Lorem ipsum dolor sit amet, consectetur adipiscing elit.
- Quisque eget justo non magna ultricies cursus non posuere velit.
- Nunc blandit, elit in tincidunt luctus, est neque cursus libero, eleifend posuere magna nisl vel dui.
- Aliquam erat volutpat.
- Lorem ipsum dolor sit amet, consectetur adipiscing elit.
- Nam laoreet enim in condimentum semper.
- Ut vel leo faucibus, sodales augue volutpat, lobortis urna.
- Nam vitae gravida tortor.";
-        let reader = BufReader::new(Cursor::new(data));
+    fn partition() {
+        let data = "
+Lorem ipsum dolor sit amet, consectetur adipiscing elit.
+Nunc ac tempus sapien,
+nec eleifend lacus. Curabitur vel imperdiet massa. Phasellus interdum
+mattis eros quis iaculis. Nullam sed nulla vel dui pellentesque
+bibendum quis et mauris. Integer vestibulum elementum metus,
+in convallis arcu lectus."
+            .trim_start();
+        let expected = vec![
+            "Lorem ipsum dolor sit amet, consectetur adipiscing elit.\nNunc ac tempus sapien,\n",
+            "nec eleifend lacus. Curabitur vel imperdiet massa. Phasellus interdum\n",
+            "mattis eros quis iaculis. Nullam sed nulla vel dui pellentesque\n",
+            "bibendum quis et mauris. Integer vestibulum elementum metus,\n",
+            "in convallis arcu lectus.",
+        ];
         let bytes = data.as_bytes();
-        let partition = Splitter::new(reader, 4, bytes.len() as i64)
-            .partition()
-            .unwrap();
-        check(partition, data);
+        let n_chunks = 5;
+        let partition = Splitter::new(bytes, n_chunks).partition();
+        check(partition, bytes, expected);
     }
 }
