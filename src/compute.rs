@@ -1,12 +1,12 @@
-use crate::pre_processing::Chunk;
 use crate::record::Record;
 use memmap2::Mmap;
 use std::collections::HashMap;
+use std::ops::Range;
 use std::sync::mpsc::Sender;
 use std::sync::Arc;
 
-pub fn stats(mmap: Arc<Mmap>, chunk: Chunk, tx: Sender<HashMap<String, Record>>) {
-    let hmap = calculate(&mmap[chunk.get()]);
+pub fn stats(mmap: Arc<Mmap>, chunk: Range<usize>, tx: Sender<HashMap<String, Record>>) {
+    let hmap = calculate(&mmap[chunk]);
     tx.send(hmap).unwrap();
 }
 

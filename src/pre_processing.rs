@@ -2,16 +2,8 @@ use memmap2::Mmap;
 use std::io;
 use std::ops::Range;
 
-pub struct Chunk(Range<usize>);
-
-impl Chunk {
-    pub fn get(self) -> Range<usize> {
-        self.0
-    }
-}
-
 pub struct Partition {
-    pub chunks: Vec<Chunk>,
+    pub chunks: Vec<Range<usize>>,
 }
 
 impl TryFrom<&Mmap> for Partition {
@@ -45,7 +37,7 @@ impl<'a> Splitter<'a> {
         let mut start = 0;
         while self.remaining_bytes > 0 {
             let end = self.get_chunk_end(start);
-            segments.push(Chunk(start..end));
+            segments.push(start..end);
             self.remaining_bytes -= (end - start) as i64;
             start = end;
         }
@@ -73,14 +65,14 @@ mod tests {
         let contents = io::Cursor::new(bytes);
         for (i, chunk) in partition.chunks.iter().enumerate() {
             let mut reader = io::BufReader::new(contents.clone());
-            let mut buffer = vec![0; chunk.0.len()];
+            let mut buffer = vec![0; chunk.len()];
             reader
-                .seek(io::SeekFrom::Start(chunk.0.start as u64))
+                .seek(io::SeekFrom::Start(chunk.start as u64))
                 .unwrap();
             reader.read(&mut buffer).unwrap();
             assert_eq!(std::str::from_utf8(&buffer).unwrap(), expected[i]);
         }
-        let actual_bytes_read = partition.chunks.iter().map(|p| p.0.len()).sum::<usize>();
+        let actual_bytes_read = partition.chunks.iter().map(|p| p.len()).sum::<usize>();
         assert_eq!(actual_bytes_read, bytes.len());
     }
 
