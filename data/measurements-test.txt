@@ -1,0 +1,10 @@
+Stockholm;-0.5
+New York;15.0
+Oslo;-10.0
+Stockholm;1.5
+Stockholm;20.0
+Oslo;10.2
+London;8.5
+London;9.5
+Paris;13.0
+New York;3.5

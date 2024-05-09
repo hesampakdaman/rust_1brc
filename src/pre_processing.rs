@@ -1,4 +1,3 @@
-use memmap2::Mmap;
 use std::io;
 use std::ops::Range;
 
@@ -6,10 +5,10 @@ pub struct Partition {
     pub chunks: Vec<Range<usize>>,
 }
 
-impl TryFrom<&Mmap> for Partition {
+impl TryFrom<&[u8]> for Partition {
     type Error = io::Error;
 
-    fn try_from(bytes: &Mmap) -> Result<Self, Self::Error> {
+    fn try_from(bytes: &[u8]) -> Result<Self, Self::Error> {
         let n_threads = std::thread::available_parallelism()?.get();
         Ok(Splitter::new(bytes, n_threads).partition())
     }
