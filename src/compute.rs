@@ -16,11 +16,11 @@ fn calculate(bytes: &[u8]) -> HashMap<String, Record> {
         if !line.is_empty() {
             let mut splitted = line.split(|&b| b == b';');
             let city = unsafe { std::str::from_utf8_unchecked(splitted.next().unwrap()) };
-            let float = parse_float(splitted.next().unwrap());
+            let num = parse_float(splitted.next().unwrap());
             if let Some(rec) = map.get_mut(city) {
-                rec.add(float);
+                rec.add(num);
             } else {
-                map.insert(city.to_string(), Record::from(float));
+                map.insert(city.to_string(), Record::from(num));
             }
         }
     }
