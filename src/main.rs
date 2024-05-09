@@ -19,9 +19,9 @@ fn main() {
         .chunks
         .into_iter()
         .for_each(|chunk| {
-            let mmap_clone = Arc::clone(&mmap);
+            let mmap = Arc::clone(&mmap);
             let tx_clone = tx.clone();
-            thread::spawn(move || compute::stats(mmap_clone, chunk, tx_clone));
+            thread::spawn(move || compute::stats(&mmap[chunk], tx_clone));
         });
     drop(tx);
     print_results(&aggregate::reduce(rx));
