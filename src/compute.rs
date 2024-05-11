@@ -63,11 +63,14 @@ New York;2.0
 Oslo;0.0
 Stockholm;11.5
 Oslo;10.2";
-        let expected = FxHashMap::from([
+        let mut expected = FxHashMap::default();
+        for (city, rec) in [
             ("Stockholm".to_string(), Record::new(15, 115, 130, 2)),
             ("New York".to_string(), Record::new(20, 20, 20, 1)),
             ("Oslo".to_string(), Record::new(0, 102, 102, 2)),
-        ]);
+        ] {
+            expected.insert(city, rec);
+        }
         check(input, expected);
     }
 }
