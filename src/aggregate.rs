@@ -1,8 +1,7 @@
-use crate::record::Record;
 use crate::compute::CityKey;
-use std::sync::mpsc::Receiver;
+use crate::record::Record;
 use fxhash::FxHashMap;
-
+use std::sync::mpsc::Receiver;
 
 pub fn reduce(rx: Receiver<FxHashMap<CityKey, Record>>) -> Vec<Record> {
     let mut hmap = FxHashMap::default();
