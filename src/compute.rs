@@ -1,15 +1,15 @@
 use crate::record::Record;
-use std::collections::HashMap;
+use fxhash::FxHashMap;
 use std::sync::mpsc::Sender;
 use memchr::memchr;
 
-pub fn stats(bytes: &[u8], tx: Sender<HashMap<String, Record>>) {
+pub fn stats(bytes: &[u8], tx: Sender<FxHashMap<String, Record>>) {
     let hmap = calculate(bytes);
     tx.send(hmap).unwrap();
 }
 
-fn calculate(mut bytes: &[u8]) -> HashMap<String, Record> {
-    let mut map: HashMap<String, Record> = HashMap::with_capacity(10_000);
+fn calculate(mut bytes: &[u8]) -> FxHashMap<String, Record> {
+    let mut map: FxHashMap<String, Record> = FxHashMap::default();
     while let Some(sep_idx) = memchr(b';', bytes) {
         let end_idx = memchr(b'\n', bytes).unwrap_or(bytes.len());
         let city = unsafe { std::str::from_utf8_unchecked(&bytes[..sep_idx]) };
@@ -51,7 +51,7 @@ fn parse_float(bytes: &[u8]) -> i32 {
 mod tests {
     use super::*;
 
-    fn check(data: &str, expected: HashMap<String, Record>) {
+    fn check(data: &str, expected: FxHashMap<String, Record>) {
         let actual = calculate(data.as_bytes());
         assert_eq!(actual, expected);
     }
@@ -63,11 +63,14 @@ New York;2.0
 Oslo;0.0
 Stockholm;11.5
 Oslo;10.2";
-        let expected = HashMap::from([
+        let mut expected = FxHashMap::default();
+        for (city, rec) in [
             ("Stockholm".to_string(), Record::new(15, 115, 130, 2)),
             ("New York".to_string(), Record::new(20, 20, 20, 1)),
             ("Oslo".to_string(), Record::new(0, 102, 102, 2)),
-        ]);
+        ] {
+            expected.insert(city, rec);
+        }
         check(input, expected);
     }
 }
