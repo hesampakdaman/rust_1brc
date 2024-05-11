@@ -1,8 +1,10 @@
 use crate::record::Record;
-use fxhash::FxHashMap;
+use crate::compute::CityKey;
 use std::sync::mpsc::Receiver;
+use fxhash::FxHashMap;
 
-pub fn reduce(rx: Receiver<FxHashMap<String, Record>>) -> Vec<(String, Record)> {
+
+pub fn reduce(rx: Receiver<FxHashMap<CityKey, Record>>) -> Vec<Record> {
     let mut hmap = FxHashMap::default();
     while let Ok(stats) = rx.recv() {
         merge_records(&mut hmap, stats);
@@ -10,7 +12,7 @@ pub fn reduce(rx: Receiver<FxHashMap<String, Record>>) -> Vec<(String, Record)> 
     to_sorted_vec(hmap)
 }
 
-fn merge_records(dst: &mut FxHashMap<String, Record>, src: FxHashMap<String, Record>) {
+fn merge_records(dst: &mut FxHashMap<CityKey, Record>, src: FxHashMap<CityKey, Record>) {
     for (city, new_record) in src {
         dst.entry(city)
             .and_modify(|existing_record: &mut Record| existing_record.merge(&new_record))
@@ -18,8 +20,8 @@ fn merge_records(dst: &mut FxHashMap<String, Record>, src: FxHashMap<String, Rec
     }
 }
 
-fn to_sorted_vec(hmap: FxHashMap<String, Record>) -> Vec<(String, Record)> {
-    let mut v = hmap.into_iter().collect::<Vec<_>>();
-    v.sort_unstable_by(|a, b| a.0.cmp(&b.0));
+fn to_sorted_vec(hmap: FxHashMap<CityKey, Record>) -> Vec<Record> {
+    let mut v = hmap.into_values().collect::<Vec<_>>();
+    v.sort_unstable_by(|a, b| a.name.cmp(&b.name));
     v
 }
