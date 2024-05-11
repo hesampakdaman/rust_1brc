@@ -1,25 +1,27 @@
 use crate::record::Record;
 use fxhash::FxHashMap;
 use memchr::memchr;
+use std::hash::{Hash, Hasher};
 use std::sync::mpsc::Sender;
 
-#[derive(Hash, PartialEq, Eq)]
+#[derive(PartialEq, Eq)]
 pub struct CityKey(u64);
 
 impl CityKey {
+    pub fn new(bytes: &[u8]) -> Self {
+        Self(Self::djb2(bytes))
+    }
+
     fn djb2(bytes: &[u8]) -> u64 {
-        let mut hash = 5381;
-        for byte in bytes {
-            hash = ((hash << 5) + hash) + u64::from(*byte); // hash * 33 + c
-        }
-        hash
+        bytes
+            .iter()
+            .fold(5381, |hash, byte| (hash * 33) ^ u64::from(*byte))
     }
 }
 
-impl From<&[u8]> for CityKey {
-    fn from(bytes: &[u8]) -> Self {
-        let hash = Self::djb2(bytes);
-        Self(hash)
+impl Hash for CityKey {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        state.write_u64(self.0);
     }
 }
 
@@ -29,10 +31,10 @@ pub fn stats(bytes: &[u8], tx: Sender<FxHashMap<CityKey, Record>>) {
 }
 
 fn calculate(mut bytes: &[u8]) -> FxHashMap<CityKey, Record> {
-    let mut map: FxHashMap<CityKey, Record> = FxHashMap::default();
+    let mut map: FxHashMap<CityKey, Record> = std::collections::HashMap::default();
     while let Some(sep_idx) = memchr(b';', bytes) {
         let end_idx = memchr(b'\n', bytes).unwrap_or(bytes.len());
-        let key = CityKey::from(&bytes[..sep_idx]);
+        let key = CityKey::new(&bytes[..sep_idx]);
         let num = parse_float(&bytes[sep_idx + 1..end_idx]);
         if let Some(rec) = map.get_mut(&key) {
             rec.add(num);
