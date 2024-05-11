@@ -1,25 +1,29 @@
 use crate::record::Record;
 use std::collections::HashMap;
 use std::sync::mpsc::Sender;
+use memchr::memchr;
 
 pub fn stats(bytes: &[u8], tx: Sender<HashMap<String, Record>>) {
     let hmap = calculate(bytes);
     tx.send(hmap).unwrap();
 }
 
-fn calculate(bytes: &[u8]) -> HashMap<String, Record> {
+fn calculate(mut bytes: &[u8]) -> HashMap<String, Record> {
     let mut map: HashMap<String, Record> = HashMap::with_capacity(10_000);
-    for line in bytes.split(|&b| b == b'\n') {
-        if !line.is_empty() {
-            let mut splitted = line.split(|&b| b == b';');
-            let city = unsafe { std::str::from_utf8_unchecked(splitted.next().unwrap()) };
-            let num = parse_float(splitted.next().unwrap());
-            if let Some(rec) = map.get_mut(city) {
-                rec.add(num);
-            } else {
-                map.insert(city.to_string(), Record::from(num));
-            }
+    while let Some(sep_idx) = memchr(b';', bytes) {
+        let end_idx = memchr(b'\n', bytes).unwrap_or(bytes.len());
+        let city = unsafe { std::str::from_utf8_unchecked(&bytes[..sep_idx]) };
+        let num = parse_float(&bytes[sep_idx+1..end_idx]);
+        if let Some(rec) = map.get_mut(city) {
+            rec.add(num);
+        } else {
+            map.insert(city.to_string(), Record::from(num));
         }
+        bytes = if end_idx < bytes.len() {
+            &bytes[end_idx+1..]
+        } else {
+            &[]
+        };
     }
     map
 }
