@@ -8,7 +8,7 @@ use std::sync::mpsc::Sender;
 pub struct CityKey(u64);
 
 impl CityKey {
-    pub fn new(bytes: &[u8]) -> Self {
+    fn new(bytes: &[u8]) -> Self {
         Self(Self::djb2(bytes))
     }
 
@@ -31,7 +31,7 @@ pub fn stats(bytes: &[u8], tx: Sender<FxHashMap<CityKey, Record>>) {
 }
 
 fn calculate(mut bytes: &[u8]) -> FxHashMap<CityKey, Record> {
-    let mut map: FxHashMap<CityKey, Record> = std::collections::HashMap::default();
+    let mut map: FxHashMap<CityKey, Record> = FxHashMap::default();
     while let Some(sep_idx) = memchr(b';', bytes) {
         let end_idx = memchr(b'\n', bytes).unwrap_or(bytes.len());
         let key = CityKey::new(&bytes[..sep_idx]);
