@@ -39,7 +39,7 @@ impl<'a> Splitter<'a> {
     }
 
     fn get_chunk_end(&mut self) -> usize {
-        if self.bytes.len() < self.chunk_size {
+        if self.bytes.len() <= self.chunk_size {
             return self.bytes.len();
         }
         let chunk_end = &self.bytes[self.chunk_size..];
