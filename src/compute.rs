@@ -53,7 +53,7 @@ mod tests {
 
     fn check(input: &str, expected: Vec<weather::Station>) {
         let map = calculate(input.as_bytes());
-        let mut actual: Vec<weather::Station> = map.to_vec();
+        let mut actual: Vec<weather::Station> = map.into_vec();
         actual.sort_unstable();
         assert_eq!(actual, expected);
     }

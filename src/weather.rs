@@ -6,6 +6,7 @@ pub use key::Key;
 pub use station::Station;
 use std::collections::hash_map::{Entry, IntoIter};
 
+#[derive(Default)]
 pub struct Report(FxHashMap<Key, Station>);
 
 impl Report {
@@ -25,13 +26,7 @@ impl Report {
         self.0.entry(k)
     }
 
-    pub fn to_vec(self) -> Vec<Station> {
+    pub fn into_vec(self) -> Vec<Station> {
         self.0.into_values().collect()
-    }
-}
-
-impl Default for Report {
-    fn default() -> Self {
-        Self(FxHashMap::default())
     }
 }
