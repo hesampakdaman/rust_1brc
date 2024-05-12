@@ -1,23 +1,23 @@
-use crate::weather::{Key, Report, Station};
+use crate::weather;
 use memchr::memchr;
 use std::sync::mpsc::Sender;
 
-pub fn stats(bytes: &[u8], tx: Sender<Report>) {
+pub fn stats(bytes: &[u8], tx: Sender<weather::Report>) {
     let hmap = calculate(bytes);
     tx.send(hmap).unwrap();
 }
 
-fn calculate(mut bytes: &[u8]) -> Report {
-    let mut map = Report::default();
+fn calculate(mut bytes: &[u8]) -> weather::Report {
+    let mut map = weather::Report::default();
     while let Some(sep_idx) = memchr(b';', bytes) {
         let end_idx = memchr(b'\n', bytes).unwrap_or(bytes.len());
-        let key = Key::new(&bytes[..sep_idx]);
+        let key = weather::Key::new(&bytes[..sep_idx]);
         let num = parse_float(&bytes[sep_idx + 1..end_idx]);
         if let Some(rec) = map.get_mut(&key) {
             rec.add(num);
         } else {
             let name = unsafe { std::str::from_utf8_unchecked(&bytes[..sep_idx]) };
-            map.insert(key, Station::from((name, num)));
+            map.insert(key, weather::Station::from((name, num)));
         }
         bytes = if end_idx < bytes.len() {
             &bytes[end_idx + 1..]
@@ -51,9 +51,9 @@ fn parse_float(bytes: &[u8]) -> i32 {
 mod tests {
     use super::*;
 
-    fn check(input: &str, expected: Vec<Station>) {
+    fn check(input: &str, expected: Vec<weather::Station>) {
         let map = calculate(input.as_bytes());
-        let mut actual: Vec<Station> = map.to_vec();
+        let mut actual: Vec<weather::Station> = map.to_vec();
         actual.sort_unstable();
         assert_eq!(actual, expected);
     }
@@ -68,9 +68,9 @@ Stockholm;11.5
 Oslo;10.2"
             .trim();
         let expected = vec![
-            Station::new("New York", 20, 20, 20, 1),
-            Station::new("Oslo", 0, 102, 102, 2),
-            Station::new("Stockholm", 15, 115, 130, 2),
+            weather::Station::new("New York", 20, 20, 20, 1),
+            weather::Station::new("Oslo", 0, 102, 102, 2),
+            weather::Station::new("Stockholm", 15, 115, 130, 2),
         ];
         check(input, expected);
     }
