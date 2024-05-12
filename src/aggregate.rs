@@ -18,7 +18,7 @@ fn merge_records(dst: &mut weather::Report, src: weather::Report) {
 }
 
 fn to_sorted_vec(hmap: weather::Report) -> Vec<weather::Station> {
-    let mut v = hmap.to_vec();
+    let mut v = hmap.into_vec();
     v.sort_unstable();
     v
 }
