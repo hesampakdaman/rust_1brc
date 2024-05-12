@@ -1,26 +1,47 @@
 use crate::record::Record;
 use fxhash::FxHashMap;
-use std::sync::mpsc::Sender;
 use memchr::memchr;
+use std::hash::{Hash, Hasher};
+use std::sync::mpsc::Sender;
 
-pub fn stats(bytes: &[u8], tx: Sender<FxHashMap<String, Record>>) {
+#[derive(PartialEq, Eq)]
+pub struct CityKey(u64);
+
+impl CityKey {
+    fn new(bytes: &[u8]) -> Self {
+        // djb2 hash fn
+        // hash(0) = 5381
+        // hash(i) = hash(i-1) * 33 ^ byte[i]
+        let hash_fn = |hash, byte: &u8| (hash * 33) ^ u64::from(*byte);
+        Self(bytes.iter().fold(5381, hash_fn))
+    }
+}
+
+impl Hash for CityKey {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        state.write_u64(self.0);
+    }
+}
+
+pub fn stats(bytes: &[u8], tx: Sender<FxHashMap<CityKey, Record>>) {
     let hmap = calculate(bytes);
     tx.send(hmap).unwrap();
 }
 
-fn calculate(mut bytes: &[u8]) -> FxHashMap<String, Record> {
-    let mut map: FxHashMap<String, Record> = FxHashMap::default();
+fn calculate(mut bytes: &[u8]) -> FxHashMap<CityKey, Record> {
+    let mut map: FxHashMap<CityKey, Record> = FxHashMap::default();
     while let Some(sep_idx) = memchr(b';', bytes) {
         let end_idx = memchr(b'\n', bytes).unwrap_or(bytes.len());
-        let city = unsafe { std::str::from_utf8_unchecked(&bytes[..sep_idx]) };
-        let num = parse_float(&bytes[sep_idx+1..end_idx]);
-        if let Some(rec) = map.get_mut(city) {
+        let key = CityKey::new(&bytes[..sep_idx]);
+        let num = parse_float(&bytes[sep_idx + 1..end_idx]);
+        if let Some(rec) = map.get_mut(&key) {
             rec.add(num);
         } else {
-            map.insert(city.to_string(), Record::from(num));
+            let name = unsafe { std::str::from_utf8_unchecked(&bytes[..sep_idx]) };
+            map.insert(key, Record::from((name, num)));
         }
         bytes = if end_idx < bytes.len() {
-            &bytes[end_idx+1..]
+            &bytes[end_idx + 1..]
         } else {
             &[]
         };
@@ -51,26 +72,27 @@ fn parse_float(bytes: &[u8]) -> i32 {
 mod tests {
     use super::*;
 
-    fn check(data: &str, expected: FxHashMap<String, Record>) {
-        let actual = calculate(data.as_bytes());
+    fn check(input: &str, expected: Vec<Record>) {
+        let map = calculate(input.as_bytes());
+        let mut actual: Vec<Record> = map.into_values().collect();
+        actual.sort_unstable_by(|a, b| a.name.cmp(&b.name));
         assert_eq!(actual, expected);
     }
 
     #[test]
     fn compute() {
-        let input = "Stockholm;1.5
+        let input = "
+Stockholm;1.5
 New York;2.0
 Oslo;0.0
 Stockholm;11.5
-Oslo;10.2";
-        let mut expected = FxHashMap::default();
-        for (city, rec) in [
-            ("Stockholm".to_string(), Record::new(15, 115, 130, 2)),
-            ("New York".to_string(), Record::new(20, 20, 20, 1)),
-            ("Oslo".to_string(), Record::new(0, 102, 102, 2)),
-        ] {
-            expected.insert(city, rec);
-        }
+Oslo;10.2"
+            .trim();
+        let expected = vec![
+            Record::new("New York", 20, 20, 20, 1),
+            Record::new("Oslo", 0, 102, 102, 2),
+            Record::new("Stockholm", 15, 115, 130, 2),
+        ];
         check(input, expected);
     }
 }

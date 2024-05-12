@@ -24,7 +24,7 @@ fn main() {
     }
 }
 
-fn run(path: PathBuf) -> Result<Vec<WeatherReport>, RunErr> {
+fn run(path: PathBuf) -> Result<Vec<Record>, RunErr> {
     let file = File::open(path).unwrap();
     let mmap = Arc::new(unsafe { MmapOptions::new().map(&file).map_err(RunErr::IO)? });
     let (tx, rx) = mpsc::channel();
@@ -41,20 +41,18 @@ fn run(path: PathBuf) -> Result<Vec<WeatherReport>, RunErr> {
     Ok(aggregate::reduce(rx))
 }
 
-type WeatherReport = (String, Record);
-
 #[derive(Debug)]
 enum RunErr {
     IO(std::io::Error),
 }
 
-fn print_results(v: &[WeatherReport]) {
+fn print_results(v: &[Record]) {
     print!("{{");
-    for (i, (name, r)) in v.iter().enumerate() {
+    for (i, record) in v.iter().enumerate() {
         if i < v.len() - 1 {
-            print!("{name}: {r}, ");
+            print!("{record}, ");
         } else {
-            print!("{name}: {r}");
+            print!("{record}");
         }
     }
     println!("}}")
@@ -69,11 +67,11 @@ mod test {
         let path = PathBuf::from("./data/measurements-test.txt");
         let actual = run(path).unwrap();
         let expected = vec![
-            (String::from("London"), Record::new(85, 95, 180, 2)),
-            (String::from("New York"), Record::new(35, 150, 185, 2)),
-            (String::from("Oslo"), Record::new(-100, 102, 2, 2)),
-            (String::from("Paris"), Record::new(130, 130, 130, 1)),
-            (String::from("Stockholm"), Record::new(-5, 200, 210, 3)),
+            Record::new("London", 85, 95, 180, 2),
+            Record::new("New York", 35, 150, 185, 2),
+            Record::new("Oslo", -100, 102, 2, 2),
+            Record::new("Paris", 130, 130, 130, 1),
+            Record::new("Stockholm", -5, 200, 210, 3),
         ];
         assert_eq!(actual, expected);
     }
