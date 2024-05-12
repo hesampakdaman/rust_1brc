@@ -1,5 +1,5 @@
-#[derive(Debug, Default, PartialEq, Eq)]
-pub struct Record {
+#[derive(Debug, Default, PartialEq, Eq, Ord)]
+pub struct Station {
     pub name: String,
     min: i32,
     max: i32,
@@ -7,7 +7,7 @@ pub struct Record {
     count: usize,
 }
 
-impl Record {
+impl Station {
     pub fn new(name: &str, min: i32, max: i32, sum: i32, count: usize) -> Self {
         Self {
             name: name.to_string(),
@@ -45,13 +45,19 @@ impl Record {
     }
 }
 
-impl From<(&str, i32)> for Record {
+impl PartialOrd for Station {
+    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+        self.name.partial_cmp(&other.name)
+    }
+}
+
+impl From<(&str, i32)> for Station {
     fn from(value: (&str, i32)) -> Self {
         Self::new(value.0, value.1, value.1, value.1, 1)
     }
 }
 
-impl std::fmt::Display for Record {
+impl std::fmt::Display for Station {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(
             f,
