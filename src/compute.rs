@@ -9,13 +9,11 @@ pub struct CityKey(u64);
 
 impl CityKey {
     fn new(bytes: &[u8]) -> Self {
-        Self(Self::djb2(bytes))
-    }
-
-    fn djb2(bytes: &[u8]) -> u64 {
-        bytes
-            .iter()
-            .fold(5381, |hash, byte| (hash * 33) ^ u64::from(*byte))
+        // djb2 hash fn
+        // hash(0) = 5381
+        // hash(i) = hash(i-1) * 33 ^ byte[i]
+        let hash_fn = |hash, byte: &u8| (hash * 33) ^ u64::from(*byte);
+        Self(bytes.iter().fold(5381, hash_fn))
     }
 }
 
