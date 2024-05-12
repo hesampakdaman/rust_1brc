@@ -32,9 +32,9 @@ fn run(path: PathBuf) -> Result<Vec<weather::Station>, RunErr> {
         .chunks
         .into_iter()
         .for_each(|chunk| {
+            let tx = tx.clone();
             let mmap = Arc::clone(&mmap);
-            let tx_clone = tx.clone();
-            thread::spawn(move || compute::stats(&mmap[chunk], tx_clone));
+            thread::spawn(move || compute::stats(&mmap[chunk], tx));
         });
     drop(tx);
     Ok(aggregate::reduce(rx))
