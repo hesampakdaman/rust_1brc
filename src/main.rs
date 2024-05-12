@@ -1,10 +1,9 @@
 mod aggregate;
 mod compute;
 mod pre_processing;
-mod record;
+mod weather;
 
 use memmap2::MmapOptions;
-use record::Record;
 use std::fs::File;
 use std::path::PathBuf;
 use std::sync::mpsc;
@@ -24,7 +23,7 @@ fn main() {
     }
 }
 
-fn run(path: PathBuf) -> Result<Vec<Record>, RunErr> {
+fn run(path: PathBuf) -> Result<Vec<weather::Station>, RunErr> {
     let file = File::open(path).unwrap();
     let mmap = Arc::new(unsafe { MmapOptions::new().map(&file).map_err(RunErr::IO)? });
     let (tx, rx) = mpsc::channel();
@@ -46,7 +45,7 @@ enum RunErr {
     IO(std::io::Error),
 }
 
-fn print_results(v: &[Record]) {
+fn print_results(v: &[weather::Station]) {
     print!("{{");
     for (i, record) in v.iter().enumerate() {
         if i < v.len() - 1 {
@@ -67,11 +66,11 @@ mod test {
         let path = PathBuf::from("./data/measurements-test.txt");
         let actual = run(path).unwrap();
         let expected = vec![
-            Record::new("London", 85, 95, 180, 2),
-            Record::new("New York", 35, 150, 185, 2),
-            Record::new("Oslo", -100, 102, 2, 2),
-            Record::new("Paris", 130, 130, 130, 1),
-            Record::new("Stockholm", -5, 200, 210, 3),
+            weather::Station::new("London", 85, 95, 180, 2),
+            weather::Station::new("New York", 35, 150, 185, 2),
+            weather::Station::new("Oslo", -100, 102, 2, 2),
+            weather::Station::new("Paris", 130, 130, 130, 1),
+            weather::Station::new("Stockholm", -5, 200, 210, 3),
         ];
         assert_eq!(actual, expected);
     }

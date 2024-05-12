@@ -1,44 +1,23 @@
-use crate::record::Record;
-use fxhash::FxHashMap;
+use crate::weather;
 use memchr::memchr;
-use std::hash::{Hash, Hasher};
 use std::sync::mpsc::Sender;
 
-#[derive(PartialEq, Eq)]
-pub struct CityKey(u64);
-
-impl CityKey {
-    fn new(bytes: &[u8]) -> Self {
-        // djb2 hash fn
-        // hash(0) = 5381
-        // hash(i) = hash(i-1) * 33 ^ byte[i]
-        let hash_fn = |hash, byte: &u8| (hash * 33) ^ u64::from(*byte);
-        Self(bytes.iter().fold(5381, hash_fn))
-    }
-}
-
-impl Hash for CityKey {
-    fn hash<H: Hasher>(&self, state: &mut H) {
-        state.write_u64(self.0);
-    }
-}
-
-pub fn stats(bytes: &[u8], tx: Sender<FxHashMap<CityKey, Record>>) {
+pub fn stats(bytes: &[u8], tx: Sender<weather::Report>) {
     let hmap = calculate(bytes);
     tx.send(hmap).unwrap();
 }
 
-fn calculate(mut bytes: &[u8]) -> FxHashMap<CityKey, Record> {
-    let mut map: FxHashMap<CityKey, Record> = FxHashMap::default();
+fn calculate(mut bytes: &[u8]) -> weather::Report {
+    let mut map = weather::Report::default();
     while let Some(sep_idx) = memchr(b';', bytes) {
         let end_idx = memchr(b'\n', bytes).unwrap_or(bytes.len());
-        let key = CityKey::new(&bytes[..sep_idx]);
+        let key = weather::Key::new(&bytes[..sep_idx]);
         let num = parse_float(&bytes[sep_idx + 1..end_idx]);
         if let Some(rec) = map.get_mut(&key) {
             rec.add(num);
         } else {
             let name = unsafe { std::str::from_utf8_unchecked(&bytes[..sep_idx]) };
-            map.insert(key, Record::from((name, num)));
+            map.insert(key, weather::Station::from((name, num)));
         }
         bytes = if end_idx < bytes.len() {
             &bytes[end_idx + 1..]
@@ -72,10 +51,10 @@ fn parse_float(bytes: &[u8]) -> i32 {
 mod tests {
     use super::*;
 
-    fn check(input: &str, expected: Vec<Record>) {
+    fn check(input: &str, expected: Vec<weather::Station>) {
         let map = calculate(input.as_bytes());
-        let mut actual: Vec<Record> = map.into_values().collect();
-        actual.sort_unstable_by(|a, b| a.name.cmp(&b.name));
+        let mut actual: Vec<weather::Station> = map.to_vec();
+        actual.sort_unstable();
         assert_eq!(actual, expected);
     }
 
@@ -89,9 +68,9 @@ Stockholm;11.5
 Oslo;10.2"
             .trim();
         let expected = vec![
-            Record::new("New York", 20, 20, 20, 1),
-            Record::new("Oslo", 0, 102, 102, 2),
-            Record::new("Stockholm", 15, 115, 130, 2),
+            weather::Station::new("New York", 20, 20, 20, 1),
+            weather::Station::new("Oslo", 0, 102, 102, 2),
+            weather::Station::new("Stockholm", 15, 115, 130, 2),
         ];
         check(input, expected);
     }
