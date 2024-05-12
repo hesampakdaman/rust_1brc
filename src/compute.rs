@@ -67,3 +67,32 @@ fn parse_float(bytes: &[u8]) -> i32 {
     }
     result
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn check(input: &str, expected: Vec<Record>) {
+        let map = calculate(input.as_bytes());
+        let mut actual: Vec<Record> = map.into_values().collect();
+        actual.sort_unstable_by(|a, b| a.name.cmp(&b.name));
+        assert_eq!(actual, expected);
+    }
+
+    #[test]
+    fn compute() {
+        let input = "
+Stockholm;1.5
+New York;2.0
+Oslo;0.0
+Stockholm;11.5
+Oslo;10.2"
+            .trim();
+        let expected = vec![
+            Record::new("New York", 20, 20, 20, 1),
+            Record::new("Oslo", 0, 102, 102, 2),
+            Record::new("Stockholm", 15, 115, 130, 2),
+        ];
+        check(input, expected);
+    }
+}
