@@ -1,4 +1,4 @@
-#[derive(Debug, Default, PartialEq, Eq, Ord)]
+#[derive(Debug, Default, PartialEq, Eq)]
 pub struct Station {
     pub name: String,
     min: i32,
@@ -47,7 +47,13 @@ impl Station {
 
 impl PartialOrd for Station {
     fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
-        self.name.partial_cmp(&other.name)
+        Some(self.cmp(other))
+    }
+}
+
+impl Ord for Station {
+    fn cmp(&self, other: &Self) -> std::cmp::Ordering {
+        self.name.cmp(&other.name)
     }
 }
 
