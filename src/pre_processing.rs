@@ -27,15 +27,15 @@ impl<'a> Splitter<'a> {
     }
 
     fn partition(mut self) -> Partition {
-        let mut segments = Vec::new();
+        let mut chunks = Vec::new();
         let mut offset = 0;
         while self.bytes.len() > 0 {
             let end = self.get_chunk_end();
+            chunks.push(offset..offset + end);
             self.bytes = &self.bytes[end..];
-            segments.push(offset..offset + end);
             offset += end;
         }
-        Partition { chunks: segments }
+        Partition { chunks }
     }
 
     fn get_chunk_end(&mut self) -> usize {
