@@ -1,3 +1,4 @@
+use memchr::memchr;
 use std::io;
 use std::ops::Range;
 
@@ -17,41 +18,38 @@ impl TryFrom<&[u8]> for Partition {
 struct Splitter<'a> {
     bytes: &'a [u8],
     chunk_size: usize,
-    remaining_bytes: i64,
 }
 
 impl<'a> Splitter<'a> {
     fn new(bytes: &'a [u8], n: usize) -> Self {
-        let remaining_bytes = bytes.len() as i64;
         let chunk_size = bytes.len() / n;
-        Self {
-            bytes,
-            chunk_size,
-            remaining_bytes,
-        }
+        Self { bytes, chunk_size }
     }
 
     fn partition(mut self) -> Partition {
         let mut segments = Vec::new();
-        let mut start = 0;
-        while self.remaining_bytes > 0 {
-            let end = self.get_chunk_end(start);
-            segments.push(start..end);
-            self.remaining_bytes -= (end - start) as i64;
-            start = end;
+        let mut offset = 0;
+        while self.bytes.len() > 0 {
+            let end = self.get_chunk_end();
+            self.bytes = &self.bytes[end..];
+            segments.push(offset..offset + end);
+            offset += end;
         }
         Partition { chunks: segments }
     }
 
-    fn get_chunk_end(&mut self, start: usize) -> usize {
-        if self.remaining_bytes < self.chunk_size as i64 {
-            return start + self.remaining_bytes as usize;
+    fn get_chunk_end(&mut self) -> usize {
+        if self.bytes.len() < self.chunk_size {
+            return self.bytes.len();
         }
-        let size_to_newline = self.bytes[(start + self.chunk_size)..]
-            .iter()
-            .position(|&b| b == b'\n')
-            .unwrap_or(0);
-        start + self.chunk_size + size_to_newline + 1
+        let chunk_end = &self.bytes[self.chunk_size..];
+        let idx_to_newline = self.handle_chunk_ending_in_the_middle_of_sentence(chunk_end);
+        self.chunk_size + idx_to_newline + 1
+    }
+
+    #[inline]
+    fn handle_chunk_ending_in_the_middle_of_sentence(&self, bytes: &[u8]) -> usize {
+        memchr(b'\n', bytes).unwrap_or_default()
     }
 }
 
