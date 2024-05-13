@@ -28,23 +28,18 @@ fn calculate(mut bytes: &[u8]) -> weather::Report {
     map
 }
 
-fn parse_float(bytes: &[u8]) -> i32 {
-    let mut result = 0;
-    let mut is_negative = false;
-    for &b in bytes {
-        match b {
-            b'0'..=b'9' => {
-                let digit = (b - b'0') as i32;
-                result = result * 10 + digit;
-            }
-            b'-' => is_negative = true,
-            _ => {}
-        }
+fn parse_float(mut bytes: &[u8]) -> i32 {
+    let mut sgn = 1;
+    if bytes[0] == b'-' {
+        sgn = -1;
+        bytes = &bytes[1..];
     }
-    if is_negative {
-        result *= -1;
-    }
-    result
+    let res = bytes.iter().fold(0, |acc, &byte| {
+        let is_digit = (b'0' <= byte && byte <= b'9') as i32;
+        let digit = (byte as i32).wrapping_sub(b'0' as i32);
+        acc * (10 * is_digit + (1 - is_digit)) + digit * is_digit
+    });
+    sgn * res
 }
 
 #[cfg(test)]
