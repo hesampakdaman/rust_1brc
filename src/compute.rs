@@ -29,6 +29,8 @@ fn calculate(mut bytes: &[u8]) -> weather::Report {
 }
 
 fn parse_float(bytes: &[u8]) -> i32 {
+    // if the first byte has a minus sign we will skip it in the
+    // iterator because neg would be 1 in that case
     let neg = (bytes[0] == b'-') as usize;
     let sgn = 1 - 2 * neg as i32;
     let res = bytes.iter().skip(neg).fold(0, |acc, &byte| {
