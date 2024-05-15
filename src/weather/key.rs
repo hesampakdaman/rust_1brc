@@ -18,7 +18,7 @@ impl Key {
                 .iter()
                 .chain(last)
                 .fold(5381, hash_fn)
-                .wrapping_mul(len as u64), // multiply with the length of input to ensure collisions free
+                .wrapping_mul(len as u64), // multiply with the length of input to ensure no collisions
         )
     }
 }
