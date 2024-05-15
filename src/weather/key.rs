@@ -8,7 +8,7 @@ impl Key {
         // djb2 hash fn
         // hash(0) = 5381
         // hash(i) = hash(i-1) * 33 + byte[i]
-        let hash_fn = |hash: u64, &byte| hash.wrapping_mul(33) + byte as u64;
+        let hash_fn = |hash: u64, &byte| hash.wrapping_mul(33).wrapping_add(byte as u64);
 
         let len = bytes.len();
         let first = &bytes[..len.min(8)];
