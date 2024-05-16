@@ -2,7 +2,7 @@
 ** Introduction
 *rust_1brc* is a Rust implementation for the [[https://1brc.dev/][One Billion Requests Challenge (1BRC)]]. The challenge involves processing one billion temperature measurements to calculate the minimum, mean, and maximum temperatures per weather station. This project aims to explore Rust's capabilities for efficient data handling and processing. The main motivation for undertaking this challenge was to leverage Rust's ~std::mpsc~ and ~std::thread~ libraries. The challenge is well-suited for parallelization, making it an ideal choice for exploring these libraries.
 
-The input file can be obtained by using one of the official scripts, such as this [[https://github.com/gunnarmorling/1brc/blob/main/src/main/python/create_measurements.py][python version]]. In the end, you will have a text file containing one billion temperature measurements, approximately 13GB in size. We refer to this file as =measurements.txt=.
+The input file can be obtained by using one of the official scripts, such as this [[https://github.com/gunnarmorling/1brc/blob/main/src/main/python/create_measurements.py][Python version]]. This script generates a text file containing one billion temperature measurements, approximately 13GB in size, referred to as =measurements.txt=. The input file uses names from the [[https://github.com/gunnarmorling/1brc/blob/main/data/weather_stations.csv][weather_stations.csv]] allowing us to optimize our hash function specifically for the official dataset. By tailoring the hash function to this specific set, we achieve higher performance compared to Rust's standard library implementation, which is generally more collision-resilient and secure.
 
 *This project will load the _entire_ file into memory and process it using all available CPU cores to maximize performance.*
 
@@ -23,6 +23,7 @@ On a MacBook M1 Pro (2021), the project processes the input file in approximatel
 
 ** Architecture
 This section provides a high-level overview of the system's architecture: the main components and their interactions.
+
 *** Main Components
 - =main.rs= :: The entry point of the application. Handles command-line arguments and initiates the processing workflow.
 - =compute.rs= :: Contains the core logic for processing the temperature data, including calculations for min, mean, and max temperatures.
@@ -37,10 +38,6 @@ This section provides a high-level overview of the system's architecture: the ma
 4. *Aggregation*: =aggregate.rs= aggregates the computed results for final output.
 5. *Output*: Results are then output in the format specified by the challenge requirements.
 
-*** Architectural Invariants
-- Efficiency :: The system must handle the entire 13GB input file in memory, leveraging Rust's performance capabilities and concurrency features to utilize all available CPU cores.
-- Scalability :: The architecture should be scalable to ensure performance remains consistent even as data volume grows.
-
 *** Boundaries
-- Module Boundaries :: Clear separation between data loading (=pre_processing.rs=), data processing (=compute.rs=), aggregation (=aggregate.rs=), and utility functions (=weather.rs=).
-- Concurrency Management :: Concurrency is managed at the processing level to ensure maximum utilization of CPU resources.
+- Module Boundaries: Clear separation between data loading (=pre_processing.rs=), data processing (=compute.rs=), aggregation (=aggregate.rs=), and utility functions (=weather.rs=).
+- Concurrency Management: Concurrency is managed at the processing level to ensure maximum utilization of CPU resources.
