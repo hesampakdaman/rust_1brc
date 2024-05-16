@@ -6,6 +6,9 @@ The input file can be obtained by using one of the official scripts, such as thi
 
 *This project will load the _entire_ file into memory and process it using all available CPU cores to maximize performance.*
 
+*** Results
+On a MacBook M1 Pro (2021), the project processes the input file in approximately 2.8 seconds.
+
 ** Usage
 To use this project, start by cloning the repository.
 #+begin_src bash
@@ -17,9 +20,6 @@ Then you can build and run the project with the following command.
 #+begin_src bash
   cargo run --release /path/to/measurements.txt
 #+end_src
-
-** Results
-On a MacBook M1 Pro (2021), the project processes the input file in approximately 2.8 seconds.
 
 ** Architecture
 This section provides a high-level overview of the system's architecture: the main components and their interactions.
