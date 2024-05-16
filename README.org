@@ -26,8 +26,8 @@ This section provides a high-level overview of the system's architecture: the ma
 
 *** Main Components
 - =main.rs= :: The entry point of the application. Handles command-line arguments and initiates the processing workflow.
-- =compute.rs= :: Contains the core logic for processing the temperature data, including calculations for min, mean, and max temperatures.
 - =pre_processing.rs= :: Manages the initial parsing and preparation of data, utilizing memory-mapped files for efficient access.
+- =compute.rs= :: Contains the core logic for processing the temperature data, including calculations for min, mean, and max temperatures.
 - =weather.rs= :: Defines data structures and utility functions that are used throughout the application.
 - =aggregate.rs= :: Responsible for aggregating the results of the temperature data processing.
 
