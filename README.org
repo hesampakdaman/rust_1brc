@@ -1,0 +1,42 @@
+* rust_1brc
+*rust_1brc* is a Rust implementation for the [[https://1brc.dev/][One Billion Requests Challenge (1BRC)]]. The challenge involves processing one billion temperature measurements to calculate the minimum, mean, and maximum temperatures per weather station. This project aims to explore Rust's capabilities for efficient data handling and processing. The main motivation for undertaking this challenge was to leverage Rust's ~std::mpsc~ and ~std::thread~ libraries. The challenge is well-suited for parallelization, making it an ideal choice for exploring these libraries.
+
+The input file can be obtained by using one of the official scripts, such as this [[https://github.com/gunnarmorling/1brc/blob/db064194be375edc02d6dbcd21268ad40f7e2869/src/main/python/create_measurements.py][Python version]]. This script generates a text file containing one billion temperature measurements, approximately 13GB in size, referred to as =measurements.txt=. The input file uses names from the [[https://github.com/gunnarmorling/1brc/blob/db064194be375edc02d6dbcd21268ad40f7e2869/data/weather_stations.csv][weather_stations.csv]] allowing us to optimize our hash function specifically for the official dataset. By tailoring the hash function to this specific set, we achieve higher performance compared to Rust's standard library implementation, which is generally more collision-resilient and secure.
+
+*This project will load the _entire_ file into memory and process it using all available CPU cores to maximize performance.*
+
+*** Results
+On a MacBook M1 Pro (2021), the project processes the input file in approximately 2.8 seconds.
+
+** Usage
+To use this project, start by cloning the repository.
+#+begin_src bash
+  git clone https://github.com/hesampakdaman/rust_1brc.git
+  cd rust_1brc
+#+end_src
+
+Then you can build and run the project with the following command.
+#+begin_src bash
+  cargo run --release /path/to/measurements.txt
+#+end_src
+
+** Architecture
+This section provides a high-level overview of the system's architecture: the main components and their interactions.
+
+*** Main Components
+- =main.rs= :: The entry point of the application. Handles command-line arguments and initiates the processing workflow.
+- =pre_processing.rs= :: Manages the initial parsing and preparation of data, utilizing memory-mapped files for efficient access.
+- =compute.rs= :: Contains the core logic for processing the temperature data, including calculations for min, mean, and max temperatures.
+- =weather.rs= :: Defines data structures and utility functions that are used throughout the application.
+- =aggregate.rs= :: Responsible for aggregating the results of the temperature data processing.
+
+*** Workflow
+1. *Initialization*: The application starts in =main.rs=, where it parses command-line arguments to get the path of the input file.
+2. *Data Loading*: =pre_processing.rs= handles the loading of the input data file using memory-mapped files to efficiently manage large data volumes.
+3. *Data Processing*: =compute.rs= processes the loaded data, calculating the required statistics (min, mean, max) for each weather station.
+4. *Aggregation*: =aggregate.rs= aggregates the computed results for final output.
+5. *Output*: Results are then output in the format specified by the challenge requirements.
+
+*** Boundaries
+- Module Boundaries: Clear separation between data loading (=pre_processing.rs=), data processing (=compute.rs=), aggregation (=aggregate.rs=), and utility functions (=weather.rs=).
+- Separating I/O: The application logic off-loads to business logic functions to keep them I/O independent. This separation ensures that the core algorithms remain focused on computation without being coupled to input/output operations enhancing testability.
