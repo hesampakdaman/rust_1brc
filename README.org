@@ -19,7 +19,7 @@ Then you can build and run the project with the following command.
 #+end_src
 
 ** Results
-On a MacBook M1 Pro (2021), the project processes the input file in approximately 2.8 seconds. This demonstrates the efficiency of the implementation and Rust's capability to handle large-scale data processing tasks effectively.
+On a MacBook M1 Pro (2021), the project processes the input file in approximately 2.8 seconds.
 
 ** Architecture
 This section provides a high-level overview of the system's architecture: the main components and their interactions.
