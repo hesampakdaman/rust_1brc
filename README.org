@@ -6,7 +6,12 @@ The input file can be obtained by using one of the official scripts, such as thi
 *This project will load the _entire_ file into memory and process it using all available CPU cores to maximize performance.*
 
 *** Results
-On a MacBook M1 Pro (2021), the project processes the input file in approximately 2.8 seconds.
+On a MacBook M1 Pro (2021), the project processes the input file in ~2.8 seconds.
+#+begin_src bash
+  Benchmark 1: ./target/release/rust_1brc ./measurements.txt
+    Time (mean ± σ):      2.820 s ±  0.046 s    [User: 23.995 s, System: 1.667 s]
+    Range (min … max):    2.745 s …  2.879 s    10 runs
+#+end_src
 
 ** Usage
 To use this project, start by cloning the repository.
