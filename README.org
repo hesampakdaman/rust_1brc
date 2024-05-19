@@ -29,19 +29,21 @@ then you can build and run the project with the following command.
 This section provides a high-level overview of the system's architecture: the main components and their interactions.
 
 *** Main Components
-- =main.rs= :: The entry point of the application. Handles command-line arguments and initiates the processing workflow.
+- =main.rs= :: The entry point of the application. Handles command-line arguments.
+- =pipeline.rs= ::  Orchestrating the processing workflow by calling other modules.
 - =pre_processing.rs= :: Manages the initial parsing and preparation of data, utilizing memory-mapped files for efficient access.
 - =compute.rs= :: Contains the core logic for processing the temperature data, including calculations for min, mean, and max temperatures.
-- =weather.rs= :: Defines data structures and utility functions that are used throughout the application.
 - =aggregate.rs= :: Responsible for aggregating the results of the temperature data processing.
+- =weather.rs= :: Defines data structures and utility functions that are used throughout the application.
 
 *** Workflow
 1. *Initialization*: The application starts in =main.rs=, where it parses command-line arguments to get the path of the input file.
-2. *Data Loading*: =pre_processing.rs= handles the loading of the input data file using memory-mapped files to efficiently manage large data volumes.
-3. *Data Processing*: =compute.rs= processes the loaded data, calculating the required statistics (min, mean, max) for each weather station.
-4. *Aggregation*: =aggregate.rs= aggregates the computed results for final output.
-5. *Output*: Results are then output in the format specified by the challenge requirements.
+2. *Orchestration*: =pipeline.rs= sets up the workflow by calling other modules.
+3. *Data Loading*: =pre_processing.rs= handles the loading of the input data file using memory-mapped files to efficiently manage large data volumes.
+4. *Data Processing*: =compute.rs= processes the loaded data, calculating the required statistics (min, mean, max) for each weather station.
+5. *Aggregation*: =aggregate.rs= aggregates the computed results for final output.
+6. *Output*: Results are then output in the format specified by the challenge requirements.
 
 *** Boundaries
-- Module Boundaries: Clear separation between data loading (=pre_processing.rs=), data processing (=compute.rs=), aggregation (=aggregate.rs=), and utility functions (=weather.rs=).
-- Separating I/O: The application logic off-loads to business logic functions to keep them I/O independent. This separation ensures that the core algorithms remain focused on computation without being coupled to input/output operations enhancing testability.
+- Module Boundaries: Clear separation between orchestration (=pipeline.rs=), data loading (=pre_processing.rs=), data processing (=compute.rs=), aggregation (=aggregate.rs=), and utility functions (=weather.rs=).
+- Separating I/O: The application logic is off-loaded to business logic functions within =pipeline.rs=, ensuring that core algorithms remain focused on computation without being coupled to input/output operations.
