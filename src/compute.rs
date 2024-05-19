@@ -34,7 +34,7 @@ fn parse_float(bytes: &[u8]) -> i32 {
     let neg = (bytes[0] == b'-') as usize;
     let sgn = 1 - 2 * neg as i32;
     let res = bytes.iter().skip(neg).fold(0, |acc, &byte| {
-        let is_digit = (b'0' <= byte && byte <= b'9') as i32;
+        let is_digit = byte.is_ascii_digit() as i32;
         let digit = (byte as i32).wrapping_sub(b'0' as i32);
         acc * (10 * is_digit + (1 - is_digit)) + digit * is_digit
     });
