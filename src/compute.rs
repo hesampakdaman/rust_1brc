@@ -19,11 +19,7 @@ fn calculate(mut bytes: &[u8]) -> weather::Report {
             let name = unsafe { std::str::from_utf8_unchecked(&bytes[..sep_idx]) };
             map.insert(key, weather::Station::from((name, num)));
         }
-        bytes = if end_idx < bytes.len() {
-            &bytes[end_idx + 1..]
-        } else {
-            &[]
-        };
+        bytes = bytes.get(end_idx+1..).unwrap_or(&[]);
     }
     map
 }
