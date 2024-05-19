@@ -38,7 +38,7 @@ This section provides a high-level overview of the system's architecture: the ma
 
 *** Workflow
 1. *Initialization*: The application starts in =main.rs=, where it parses command-line arguments to get the path of the input file.
-2. *Orchestration*: =pipeline.rs= sets up and workflow by calling other modules.
+2. *Orchestration*: =pipeline.rs= sets up the workflow by calling other modules.
 3. *Data Loading*: =pre_processing.rs= handles the loading of the input data file using memory-mapped files to efficiently manage large data volumes.
 4. *Data Processing*: =compute.rs= processes the loaded data, calculating the required statistics (min, mean, max) for each weather station.
 5. *Aggregation*: =aggregate.rs= aggregates the computed results for final output.
@@ -46,4 +46,4 @@ This section provides a high-level overview of the system's architecture: the ma
 
 *** Boundaries
 - Module Boundaries: Clear separation between orchestration (=pipeline.rs=), data loading (=pre_processing.rs=), data processing (=compute.rs=), aggregation (=aggregate.rs=), and utility functions (=weather.rs=).
-- Separating I/O: The application logic off-loads to business logic functions to keep them I/O independent. This separation ensures that the core algorithms remain focused on computation without being coupled to input/output operations enhancing testability.
+- Separating I/O: The application logic is off-loaded to business logic functions within =pipeline.rs=, ensuring that core algorithms remain focused on computation without being coupled to input/output operations.
