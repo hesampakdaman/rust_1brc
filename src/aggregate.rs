@@ -6,7 +6,7 @@ pub fn reduce(rx: Receiver<weather::Report>) -> Vec<weather::Station> {
     while let Ok(stats) = rx.recv() {
         merge_records(&mut hmap, stats);
     }
-    to_sorted_vec(hmap)
+    into_sorted_vec(hmap)
 }
 
 fn merge_records(dst: &mut weather::Report, src: weather::Report) {
@@ -17,7 +17,7 @@ fn merge_records(dst: &mut weather::Report, src: weather::Report) {
     }
 }
 
-fn to_sorted_vec(hmap: weather::Report) -> Vec<weather::Station> {
+fn into_sorted_vec(hmap: weather::Report) -> Vec<weather::Station> {
     let mut v = hmap.into_vec();
     v.sort_unstable();
     v
