@@ -3,29 +3,28 @@ use memchr::memchr;
 use std::sync::mpsc::Sender;
 
 pub fn stats(bytes: &[u8], tx: Sender<weather::Report>) {
-    let hmap = calculate(bytes);
-    tx.send(hmap).unwrap();
+    tx.send(create_report(bytes)).unwrap();
 }
 
-fn calculate(mut bytes: &[u8]) -> weather::Report {
-    let mut map = weather::Report::default();
+fn create_report(mut bytes: &[u8]) -> weather::Report {
+    let mut report = weather::Report::default();
     while let Some(sep_idx) = memchr(b';', bytes) {
         let end_idx = memchr(b'\n', bytes).unwrap_or(bytes.len());
-        let key = weather::Key::new(&bytes[..sep_idx]);
-        let num = parse_float(&bytes[sep_idx + 1..end_idx]);
-        if let Some(rec) = map.get_mut(&key) {
-            rec.add(num);
-        } else {
-            let name = unsafe { std::str::from_utf8_unchecked(&bytes[..sep_idx]) };
-            map.insert(key, weather::Station::from((name, num)));
-        }
-        bytes = if end_idx < bytes.len() {
-            &bytes[end_idx + 1..]
-        } else {
-            &[]
-        };
+        process_station(&mut report, bytes, sep_idx, end_idx);
+        bytes = bytes.get(end_idx + 1..).unwrap_or(&[]);
     }
-    map
+    report
+}
+
+fn process_station(report: &mut weather::Report, bytes: &[u8], sep_idx: usize, end_idx: usize) {
+    let key = weather::Key::new(&bytes[..sep_idx]);
+    let num = parse_float(&bytes[sep_idx + 1..end_idx]);
+    if let Some(station) = report.get_mut(&key) {
+        station.add(num);
+    } else {
+        let name = unsafe { std::str::from_utf8_unchecked(&bytes[..sep_idx]) };
+        report.insert(key, weather::Station::from((name, num)));
+    }
 }
 
 fn parse_float(bytes: &[u8]) -> i32 {
@@ -46,8 +45,8 @@ mod tests {
     use super::*;
 
     fn check(input: &str, expected: Vec<weather::Station>) {
-        let map = calculate(input.as_bytes());
-        let mut actual: Vec<weather::Station> = map.into_vec();
+        let report = create_report(input.as_bytes());
+        let mut actual: Vec<weather::Station> = report.into_vec();
         actual.sort_unstable();
         assert_eq!(actual, expected);
     }
