@@ -3,38 +3,27 @@ use memchr::memchr;
 use std::sync::mpsc::Sender;
 
 pub fn stats(bytes: &[u8], tx: Sender<weather::Report>) {
-    tx.send(ReportBuilder::new(bytes).build()).unwrap();
+    tx.send(create_report(bytes)).unwrap();
 }
 
-struct ReportBuilder<'a> {
-    bytes: &'a [u8],
-    report: weather::Report,
+fn create_report(mut bytes: &[u8]) -> weather::Report {
+    let mut report = weather::Report::default();
+    while let Some(sep_idx) = memchr(b';', bytes) {
+        let end_idx = memchr(b'\n', bytes).unwrap_or(bytes.len());
+        process_station(&mut report, bytes, sep_idx, end_idx);
+        bytes = bytes.get(end_idx + 1..).unwrap_or(&[]);
+    }
+    report
 }
 
-impl<'a> ReportBuilder<'a> {
-    fn new(bytes: &'a [u8]) -> Self {
-        let report = weather::Report::default();
-        Self { bytes, report }
-    }
-
-    fn build(mut self) -> weather::Report {
-        while let Some(sep_idx) = memchr(b';', self.bytes) {
-            let end_idx = memchr(b'\n', self.bytes).unwrap_or(self.bytes.len());
-            self.process_station(sep_idx, end_idx);
-            self.bytes = self.bytes.get(end_idx + 1..).unwrap_or(&[]);
-        }
-        self.report
-    }
-
-    fn process_station(&mut self, sep_idx: usize, end_idx: usize) {
-        let key = weather::Key::new(&self.bytes[..sep_idx]);
-        let num = parse_float(&self.bytes[sep_idx + 1..end_idx]);
-        if let Some(station) = self.report.get_mut(&key) {
-            station.add(num);
-        } else {
-            let name = unsafe { std::str::from_utf8_unchecked(&self.bytes[..sep_idx]) };
-            self.report.insert(key, weather::Station::from((name, num)));
-        }
+fn process_station(report: &mut weather::Report, bytes: &[u8], sep_idx: usize, end_idx: usize) {
+    let key = weather::Key::new(&bytes[..sep_idx]);
+    let num = parse_float(&bytes[sep_idx + 1..end_idx]);
+    if let Some(station) = report.get_mut(&key) {
+        station.add(num);
+    } else {
+        let name = unsafe { std::str::from_utf8_unchecked(&bytes[..sep_idx]) };
+        report.insert(key, weather::Station::from((name, num)));
     }
 }
 
@@ -56,7 +45,7 @@ mod tests {
     use super::*;
 
     fn check(input: &str, expected: Vec<weather::Station>) {
-        let report = ReportBuilder::new(input.as_bytes()).build();
+        let report = create_report(input.as_bytes());
         let mut actual: Vec<weather::Station> = report.into_vec();
         actual.sort_unstable();
         assert_eq!(actual, expected);
