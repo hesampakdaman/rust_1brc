@@ -20,10 +20,10 @@ fn main() -> Result<(), std::io::Error> {
 }
 
 fn print_formatted(stations: &[weather::Station]) {
-    let s = stations
+    let formatted = stations
         .iter()
-        .map(|st| st.to_string())
+        .map(|station| station.to_string())
         .collect::<Vec<String>>()
         .join(", ");
-    println!("{{{s}}}");
+    println!("{{{formatted}}}");
 }
