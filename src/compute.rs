@@ -34,6 +34,9 @@ fn parse_float(bytes: &[u8]) -> i32 {
     let sgn = 1 - 2 * neg as i32;
     let res = bytes.iter().skip(neg).fold(0, |acc, &byte| {
         let is_digit = byte.is_ascii_digit() as i32;
+        // one of the bytes is b'.' which would cause integer overflow
+        // if b'0' is subracted from it, and `is_digit` is 0 in that
+        // case.
         let digit = (byte as i32).wrapping_sub(b'0' as i32);
         acc * (10 * is_digit + (1 - is_digit)) + digit * is_digit
     });
