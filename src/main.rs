@@ -19,14 +19,7 @@ fn main() -> Result<(), std::io::Error> {
     Ok(())
 }
 
-fn print_formatted(v: &[weather::Station]) {
-    print!("{{");
-    for (i, record) in v.iter().enumerate() {
-        if i < v.len() - 1 {
-            print!("{record}, ");
-        } else {
-            print!("{record}");
-        }
-    }
-    println!("}}")
+fn print_formatted(stations: &[weather::Station]) {
+    let s = stations.iter().map(|st| st.to_string()).collect::<Vec<String>>().join(", ");
+    println!("{{{s}}}");
 }
